@@ -12,7 +12,21 @@ docker-compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to start..."
-sleep 5
+sleep 10
+
+# Check if database exists, if not, run indexer
+echo "Checking database..."
+if ! docker exec library-api test -f /app/index/library.db; then
+    echo "Database not found. Running indexer..."
+    docker exec library-api python indexer/build_index.py
+    echo "Indexer completed."
+elif [ $(docker exec library-api sqlite3 /app/index/library.db "SELECT COUNT(*) FROM quotes" 2>/dev/null || echo "0") = "0" ]; then
+    echo "Database exists but is empty. Running indexer..."
+    docker exec library-api python indexer/build_index.py
+    echo "Indexer completed."
+else
+    echo "Database is ready."
+fi
 
 # Get the IP addresses
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then

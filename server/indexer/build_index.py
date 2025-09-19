@@ -246,7 +246,19 @@ def main():
                        help="Only rebuild FTS index (faster)")
     parser.add_argument("--db-path", default="index/library.db",
                        help="SQLite database path")
-    parser.add_argument("--data-dir", default="../data",
+
+    # Auto-detect data directory - works in both development and Docker container
+    default_data_dir = None
+    if os.path.exists("/app/data"):  # Docker container path
+        default_data_dir = "/app/data"
+    elif os.path.exists("../data"):  # Local development path
+        default_data_dir = "../data"
+    elif os.path.exists("data"):  # Alternative local path
+        default_data_dir = "data"
+    else:
+        default_data_dir = "../data"  # Fallback
+
+    parser.add_argument("--data-dir", default=default_data_dir,
                        help="Data directory containing biblio/ and extracts/")
 
     args = parser.parse_args()
