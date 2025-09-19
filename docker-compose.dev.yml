@@ -10,11 +10,12 @@ services:
       - ./data:/app/data:ro
       # Mount index directory for SQLite database (persistent)
       - ./index:/app/index
-      # Mount source code for development (optional, remove for production)
+      # Mount source code for hot reload
       - ./api:/app/api
       - ./indexer:/app/indexer
     environment:
       - PYTHONPATH=/app
+      - ENV=development
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -22,33 +23,21 @@ services:
       timeout: 10s
       retries: 3
 
-  library-ui:
+  library-ui-dev:
     build:
       context: ./ui
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./ui/src:/app/src
+      - ./ui/public:/app/public
     environment:
       - REACT_APP_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true  # For file watching in Docker
     depends_on:
       - library-api
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Optional: Add nginx reverse proxy for production deployment
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./ssl:/etc/nginx/ssl:ro
-  #   depends_on:
-  #     - library-api
-  #     - library-ui
-  #   restart: unless-stopped
+    stdin_open: true
+    tty: true

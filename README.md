@@ -9,6 +9,7 @@ A search system that finds and returns *quotes* from protected documents without
 - **SQLite + FTS5**: Fast full-text search optimized for Raspberry Pi 4
 - **Docker Ready**: Simple deployment with docker-compose
 - **RESTful API**: FastAPI-based with OpenAPI documentation
+- **React Frontend**: Modern, responsive UI for searching and browsing quotes
 
 ## Launch Instructions
 
@@ -17,25 +18,28 @@ A search system that finds and returns *quotes* from protected documents without
 **Prerequisites**: Docker and Docker Compose installed
 
 ```bash
-# 1. Start the application
+# 1. Start the full application stack (API + Frontend)
 docker-compose up --build
 
-# 2. The API will be available at http://localhost:8000
-# The index will be built automatically during startup
+# 2. Access the application:
+#    - Frontend UI: http://localhost:3000
+#    - API: http://localhost:8000
+#    - API Docs: http://localhost:8000/docs
 
-# 3. Test the search
+# 3. For development with hot-reload:
+docker-compose -f docker-compose.dev.yml up
+
+# 4. Test the API directly:
 curl "http://localhost:8000/search?q=\"Black Mountain College\""
-
-# 4. View API documentation
-open http://localhost:8000/docs
 ```
 
 ### Option B: Local Development (No Docker)
 
-**Prerequisites**: Python 3.8+ and pip installed
+**Prerequisites**: Python 3.8+, Node.js 18+, npm
 
+#### Backend (API)
 ```bash
-# 1. Install dependencies
+# 1. Install Python dependencies
 pip install -r requirements.txt
 
 # 2. Build the search index
@@ -43,12 +47,20 @@ python -m indexer.build_index
 
 # 3. Start the API server
 uvicorn api.main:app --reload --port 8000
+```
 
-# 4. Test the search
-curl "http://localhost:8000/search?q=\"Black Mountain College\""
+#### Frontend (UI)
+```bash
+# 1. Navigate to UI directory
+cd ui
 
-# 5. View API documentation
-open http://localhost:8000/docs
+# 2. Install dependencies
+npm install
+
+# 3. Start development server
+npm start
+
+# 4. Access the application at http://localhost:3000
 ```
 
 ## Example Searches
@@ -127,5 +139,12 @@ PRAGMA temp_store = memory;
 1. **Data Sources**: CSV bibliography + JSON highlight files
 2. **Indexer**: Parses sources → SQLite + FTS5 virtual table
 3. **API**: FastAPI with BM25 + phrase bonus scoring
-4. **Results**: Book-grouped with expandable quotes
-5. **Privacy**: Only quotes + citations returned, never full documents
+4. **Frontend**: React UI with Tailwind CSS for responsive design
+5. **Results**: Book-grouped with expandable quotes
+6. **Privacy**: Only quotes + citations returned, never full documents
+
+## Docker Services
+
+- **library-api**: FastAPI backend service (port 8000)
+- **library-ui**: React frontend served by nginx (port 3000)
+- **nginx** (optional): Production reverse proxy for both services
