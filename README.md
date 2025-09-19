@@ -10,32 +10,48 @@ A search system that finds and returns *quotes* from protected documents without
 - **Docker Ready**: Simple deployment with docker-compose
 - **RESTful API**: FastAPI-based with OpenAPI documentation
 
-## Quick Start
+## Launch Instructions
 
-### 1. Build the Index
+### Option A: Docker Deployment (Recommended)
+
+**Prerequisites**: Docker and Docker Compose installed
 
 ```bash
-# Install dependencies
+# 1. Start the application
+docker-compose up --build
+
+# 2. The API will be available at http://localhost:8000
+# The index will be built automatically during startup
+
+# 3. Test the search
+curl "http://localhost:8000/search?q=\"Black Mountain College\""
+
+# 4. View API documentation
+open http://localhost:8000/docs
+```
+
+### Option B: Local Development (No Docker)
+
+**Prerequisites**: Python 3.8+ and pip installed
+
+```bash
+# 1. Install dependencies
 pip install -r requirements.txt
 
-# Build search index from your data
+# 2. Build the search index
 python -m indexer.build_index
 
-# Check index stats
-curl http://localhost:8000/quotes/admin/stats
-```
-
-### 2. Start the API
-
-```bash
-# Local development
+# 3. Start the API server
 uvicorn api.main:app --reload --port 8000
 
-# Or with Docker
-docker-compose up --build
+# 4. Test the search
+curl "http://localhost:8000/search?q=\"Black Mountain College\""
+
+# 5. View API documentation
+open http://localhost:8000/docs
 ```
 
-### 3. Search Quotes
+## Example Searches
 
 ```bash
 # Simple search
