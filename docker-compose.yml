@@ -2,7 +2,10 @@ version: '3.8'
 
 services:
   library-api:
-    build: .
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: library-api
     ports:
       - "8000:8000"
     volumes:
@@ -10,9 +13,9 @@ services:
       - ./data:/app/data:ro
       # Mount index directory for SQLite database (persistent)
       - ./index:/app/index
-      # Mount source code for development (optional, remove for production)
-      - ./api:/app/api
-      - ./indexer:/app/indexer
+      # Mount source code for development (optional, comment out for production)
+      - ./server/api:/app/api
+      - ./server/indexer:/app/indexer
     environment:
       - PYTHONPATH=/app
     restart: unless-stopped
@@ -26,6 +29,7 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
+    container_name: library-ui
     ports:
       - "3000:3000"
     environment:
@@ -42,6 +46,7 @@ services:
   # Optional: Add nginx reverse proxy for production deployment
   # nginx:
   #   image: nginx:alpine
+  #   container_name: library-nginx
   #   ports:
   #     - "80:80"
   #     - "443:443"
@@ -52,3 +57,11 @@ services:
   #     - library-api
   #     - library-ui
   #   restart: unless-stopped
+
+volumes:
+  library_index:
+    driver: local
+
+networks:
+  default:
+    name: library-network
