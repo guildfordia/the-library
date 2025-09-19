@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Library - Quote Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Courier New', monospace; }
+        *:focus { outline: 2px solid #666; outline-offset: 2px; }
+    </style>
+</head>
+<body class="bg-white text-black">
+    <div id="app" class="min-h-screen p-4 max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="mb-6">
+            <pre class="text-sm text-gray-600 mb-2">+--------------------------------------------------------------------------+
+| THE LIBRARY :: Semantic Quote Search Server                             |
++--------------------------------------------------------------------------+</pre>
+        </div>
+
+        <!-- Search Form -->
+        <form id="searchForm" class="mb-6">
+            <div class="border border-black p-4">
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="searchInput" type="text" placeholder="Enter search terms..."
+                           class="flex-1 border border-gray-400 p-2 bg-white focus:border-black">
+                    <button type="submit" id="searchBtn"
+                            class="border border-black px-4 py-2 hover:bg-gray-100 disabled:opacity-50">
+                        [SEARCH]
+                    </button>
+                </div>
+                <div class="text-sm text-gray-500 mt-2">
+                    tip: use quotes "..." for exact phrase matching
+                </div>
+            </div>
+        </form>
+
+        <!-- Results Container -->
+        <div id="results"></div>
+
+        <!-- Footer -->
+        <div class="mt-12 pt-6 border-t border-gray-300 text-sm text-gray-500 text-center">
+            <pre>+--------------------------------------------------------------------------+
+| ASCII UI optimized for Raspberry Pi 4                                   |
++--------------------------------------------------------------------------+</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const BOOKS_PER_PAGE = 10;
+        const QUOTES_PER_EXPAND = 10;
+
+        let currentQuery = '';
+        let currentPage = 1;
+        let totalResults = 0;
+        let currentResults = null; // Store results to avoid re-fetching
+        let expandedBooks = {};
+        let quoteLimits = {};
+
+        // Search form handler
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            currentQuery = query;
+            currentPage = 1;
+            await performSearch();
+        });
+
+        async function performSearch() {
+            const searchBtn = document.getElementById('searchBtn');
+            const searchInput = document.getElementById('searchInput');
+
+            searchBtn.innerHTML = '[ .... ]';
+            searchBtn.disabled = true;
+            searchInput.disabled = true;
+
+            try {
+                const offset = (currentPage - 1) * BOOKS_PER_PAGE;
+                const response = await fetch(
+                    `${API_URL}/search?q=${encodeURIComponent(currentQuery)}&offset=${offset}&limit=${BOOKS_PER_PAGE}`
+                );
+                const data = await response.json();
+
+                if (response.ok) {
+                    totalResults = data.total || 0;
+                    currentResults = data;
+                    expandedBooks = {};
+                    quoteLimits = {};
+                    renderResults(data);
+                } else {
+                    renderError('Search failed');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                renderError('Connection error');
+            } finally {
+                searchBtn.innerHTML = '[SEARCH]';
+                searchBtn.disabled = false;
+                searchInput.disabled = false;
+            }
+        }
+
+        function renderResults(data) {
+            const container = document.getElementById('results');
+
+            if (!data.results || data.results.length === 0) {
+                container.innerHTML = `
+                    <div class="text-gray-600 text-center py-8">
+                        no matches (tip: use quotes "..." for exact phrase)
+                    </div>
+                `;
+                return;
+            }
+
+            const totalPages = Math.ceil(totalResults / BOOKS_PER_PAGE);
+
+            let html = `
+                <div class="text-sm text-gray-600 mb-4">
+                    Found ${totalResults} result${totalResults !== 1 ? 's' : ''} |
+                    Page ${currentPage} of ${totalPages}
+                </div>
+                <div class="space-y-4">
+            `;
+
+            data.results.forEach((result, idx) => {
+                const bookId = result.book.id;
+                const isExpanded = expandedBooks[bookId];
+                const quoteLimit = quoteLimits[bookId] || QUOTES_PER_EXPAND;
+
+                html += `
+                    <div class="border border-gray-400">
+                        <div class="bg-gray-50 p-3 flex items-start">
+                            <button onclick="toggleBook(${bookId})"
+                                    class="mr-3 text-lg hover:bg-gray-200 px-1"
+                                    aria-expanded="${isExpanded}">
+                                ${isExpanded ? '[-]' : '[+]'}
+                            </button>
+                            <div class="flex-1">
+                                <div class="font-bold">${result.book.title || 'Untitled'}</div>
+                                ${result.book.authors ? `<div class="text-sm text-gray-600">${result.book.authors}</div>` : ''}
+                                ${result.book.year ? `<div class="text-sm text-gray-600">(${result.book.year})</div>` : ''}
+                                <div class="text-sm text-gray-500 mt-1">
+                                    ${result.hits_count} quote${result.hits_count !== 1 ? 's' : ''} found
+                                </div>
+                            </div>
+                        </div>
+                        ${isExpanded ? renderQuotes(result, bookId, quoteLimit) : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+
+            // Pagination
+            if (totalPages > 1) {
+                html += `
+                    <div class="mt-6 flex justify-center gap-2">
+                        <button onclick="changePage(${currentPage - 1})"
+                                ${currentPage === 1 ? 'disabled' : ''}
+                                class="border border-gray-400 px-3 py-1 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            [←prev]
+                        </button>
+                        <span class="px-3 py-1">${currentPage} / ${totalPages}</span>
+                        <button onclick="changePage(${currentPage + 1})"
+                                ${currentPage === totalPages ? 'disabled' : ''}
+                                class="border border-gray-400 px-3 py-1 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                            [next→]
+                        </button>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function renderQuotes(result, bookId, quoteLimit) {
+            let html = '<div class="border-t border-gray-300">';
+
+            const quotesToShow = result.top_quotes.slice(0, quoteLimit);
+            quotesToShow.forEach((quote, idx) => {
+                const quoteCitation = `"${quote.quote_text}" — ${result.book.title}, ${result.book.authors || 'Unknown'} (${result.book.year || 'n.d.'}), p. ${quote.page || 'n/a'}`;
+
+                html += `
+                    <div class="p-3 border-b border-gray-200 last:border-b-0">
+                        <div class="flex items-start">
+                            <div class="flex-1 pr-2">
+                                <div class="text-sm mb-1">
+                                    <span class="text-gray-500">[${idx + 1}]</span>
+                                    "${quote.quote_text}"
+                                </div>
+                                ${(quote.page || quote.section) ? `
+                                    <div class="text-sm text-gray-500">
+                                        ${quote.page ? `page ${quote.page}` : ''}
+                                        ${quote.page && quote.section ? ', ' : ''}
+                                        ${quote.section ? `section: ${quote.section}` : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <button onclick="copyQuote('${escape(quoteCitation)}')"
+                                    class="text-xs border border-gray-400 px-2 py-1 hover:bg-gray-100">
+                                [copy]
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (result.top_quotes.length > quoteLimit) {
+                const remaining = Math.min(QUOTES_PER_EXPAND, result.top_quotes.length - quoteLimit);
+                html += `
+                    <div class="p-3 text-center">
+                        <button onclick="expandMoreQuotes(${bookId})"
+                                class="text-sm border border-gray-400 px-3 py-1 hover:bg-gray-100">
+                            [show ${remaining} more]
+                        </button>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function renderError(message) {
+            document.getElementById('results').innerHTML = `
+                <div class="text-red-600 text-center py-8 border border-red-300 bg-red-50">
+                    Error: ${message}
+                </div>
+            `;
+        }
+
+        function toggleBook(bookId) {
+            expandedBooks[bookId] = !expandedBooks[bookId];
+            if (!quoteLimits[bookId]) {
+                quoteLimits[bookId] = QUOTES_PER_EXPAND;
+            }
+            // Re-render without fetching
+            if (currentResults) {
+                renderResults(currentResults);
+            }
+        }
+
+        function expandMoreQuotes(bookId) {
+            quoteLimits[bookId] = (quoteLimits[bookId] || QUOTES_PER_EXPAND) + QUOTES_PER_EXPAND;
+            // Re-render without fetching
+            if (currentResults) {
+                renderResults(currentResults);
+            }
+        }
+
+        async function changePage(page) {
+            currentPage = page;
+            await performSearch();
+        }
+
+        function escape(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+        }
+
+        function copyQuote(text) {
+            // Unescape the text
+            const unescaped = text.replace(/\\'/g, "'").replace(/\\"/g, '"').replace(/\\n/g, '\n');
+            navigator.clipboard.writeText(unescaped).then(() => {
+                // Optional: Show brief feedback
+                console.log('Quote copied to clipboard');
+            });
+        }
+
+        // Focus on search input on load
+        document.getElementById('searchInput').focus();
+    </script>
+</body>
+</html>

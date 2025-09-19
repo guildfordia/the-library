@@ -1,0 +1,16 @@
+# Ignore unnecessary files for Docker build
+.git
+.gitignore
+README.md
+CLAUDE.md
+.DS_Store
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+venv/
+.env
+index/*.db
+index/*.db-*

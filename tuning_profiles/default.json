@@ -1,0 +1,23 @@
+{
+  "name": "default",
+  "description": "Default scoring configuration",
+  "config": {
+    "bm25_weight": 1.0,
+    "phrase_bonus": 2.0,
+    "book_title_boost": 5.0,
+    "book_author_boost": 4.0,
+    "field_weights": {
+      "quote_text": 1.0,
+      "keywords": 0.8,
+      "themes": 0.6
+    }
+  },
+  "overrides": {
+    "book_boosts": {},
+    "quote_boosts": {}
+  }
+}
+
+
+
+De

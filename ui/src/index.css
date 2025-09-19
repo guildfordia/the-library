@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global monospace font */
+* {
+  font-family: 'Courier New', monospace;
+}
+
+/* Focus styles */
+*:focus {
+  outline: 2px solid #666;
+  outline-offset: 2px;
+}
+
+/* ASCII frame styles */
+.ascii-frame {
+  border: 1px solid #000;
+  position: relative;
+}
+
+.ascii-frame::before {
+  content: '+';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  background: white;
+}
+
+.ascii-frame::after {
+  content: '+';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  background: white;
+}
+
+/* Custom scrollbar for monospace aesthetic */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 1px solid #666;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
