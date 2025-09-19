@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './index.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.100.242:8000';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Helper function to highlight search terms in text
 const highlightSearchTerms = (text, query) => {

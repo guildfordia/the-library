@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './index.css';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.100.242:8000';
+const API_URL = process.env.REACT_APP_API_URL || '/api';
 
 // Debug: Show what API URL is being used
 console.log('TuningApp API_URL being used:', API_URL);
