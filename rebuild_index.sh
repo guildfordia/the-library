@@ -10,13 +10,13 @@ echo "🔄 Rebuilding The Library search index..."
 # Change to server directory
 cd "$(dirname "$0")/server"
 
-# Check if data files exist
-if [ ! -f "data/biblio/final_biblio_EXCELLENCE_FINALE.csv" ]; then
-    echo "⚠️  Warning: Bibliography CSV not found at data/biblio/final_biblio_EXCELLENCE_FINALE.csv"
+# Check if data files exist (paths relative to server directory)
+if [ ! -f "../data/biblio/bibliographie_finale_these_FINAL_translated.csv" ]; then
+    echo "⚠️  Warning: Bibliography CSV not found at ../data/biblio/bibliographie_finale_these_FINAL_translated.csv"
 fi
 
-if [ ! -d "data/extracts" ]; then
-    echo "⚠️  Warning: Extracts directory not found at data/extracts/"
+if [ ! -d "../data/extracts" ]; then
+    echo "⚠️  Warning: Extracts directory not found at ../data/extracts/"
 fi
 
 # Run the indexer

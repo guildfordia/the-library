@@ -116,9 +116,14 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
             book_id = cursor.lastrowid
 
             # Map by filename for linking with extracts
+            # Use title as fallback since file_path may not exist in CSV
             if row.get('file_path'):
                 filename = Path(row['file_path']).stem
                 book_mapping[filename] = book_id
+            elif row.get('title'):
+                # Use title as mapping key for fuzzy matching
+                title = row['title'].strip()
+                book_mapping[title] = book_id
 
     conn.commit()
     print(f"Loaded {len(book_mapping)} books from bibliography")
@@ -241,7 +246,7 @@ def main():
                        help="Only rebuild FTS index (faster)")
     parser.add_argument("--db-path", default="index/library.db",
                        help="SQLite database path")
-    parser.add_argument("--data-dir", default="data",
+    parser.add_argument("--data-dir", default="../data",
                        help="Data directory containing biblio/ and extracts/")
 
     args = parser.parse_args()
@@ -266,7 +271,7 @@ def main():
             create_tables(conn)
 
             # Load data
-            biblio_path = os.path.join(args.data_dir, "biblio", "final_biblio_EXCELLENCE_FINALE.csv")
+            biblio_path = os.path.join(args.data_dir, "biblio", "bibliographie_finale_these_FINAL_translated.csv")
             extracts_dir = os.path.join(args.data_dir, "extracts")
 
             book_mapping = load_bibliography(conn, biblio_path)
