@@ -1,6 +1,6 @@
 # UI Technical Specifications
 
-You are generating an ASCII-styled, minimal React UI for the **Semantic Quotes Search Server**.
+You are generating an ASCII-styled, minimal React UI for the **A Black Mountain Retcon Tool**.
 
 ## Purpose
 - Let users search for **quotes** (not full documents).
@@ -9,7 +9,7 @@ You are generating an ASCII-styled, minimal React UI for the **Semantic Quotes S
 
 ## Visual style
 - Background: white. Text: black/gray only.
-- Global font: **monospace** (`font-mono` via Tailwind).
+- Global font: **Arial** (`font-sans` via Tailwind).
 - Use ASCII frames/separators and labels, e.g.:
   ```
   +--------------------------------------------------------------------------+
@@ -81,7 +81,7 @@ You are generating an ASCII-styled, minimal React UI for the **Semantic Quotes S
 
 ## Implementation Notes
 - Use React 18+ with functional components and hooks
-- Tailwind CSS for styling with monospace font classes
+- Tailwind CSS for styling with Arial font classes
 - Fetch API for backend communication
 - localStorage for any client-side preferences (optional)
 - No external icon libraries; ASCII characters only
