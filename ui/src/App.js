@@ -39,7 +39,7 @@ const SpinnerAscii = () => <span className="text-gray-500">[ .... ]</span>;
 const Toast = ({ message, visible }) => {
   if (!visible) return null;
   return (
-    <div className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded font-mono text-sm">
+    <div className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded text-sm">
       {message}
     </div>
   );
@@ -61,7 +61,7 @@ const SearchBar = ({ query, setQuery, onSearch, loading }) => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Enter search terms..."
-            className="flex-1 border-2 border-gray-300 p-3 bg-white focus:border-black transition-colors font-mono"
+            className="flex-1 border-2 border-gray-300 p-3 bg-white focus:border-black transition-colors"
             disabled={loading}
           />
           <button
@@ -320,7 +320,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
       <h4 className="font-bold mb-3">Why This Book Ranked Here</h4>
-      <div className="space-y-4 text-sm font-mono">
+      <div className="space-y-4 text-sm">
 
         {/* Book Ranking Position */}
         <div className="bg-black text-white p-3 rounded">
@@ -341,19 +341,19 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
               <div className="grid grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-gray-500">Total Quotes:</span>
-                  <div className="font-mono font-bold">{scoreData.totalBookQuotes || 'N/A'}</div>
+                  <div className=" font-bold">{scoreData.totalBookQuotes || 'N/A'}</div>
                 </div>
                 <div>
                   <span className="text-gray-500">Relevant Quotes:</span>
-                  <div className="font-mono font-bold">{scoreData.hitsCount || 0}</div>
+                  <div className=" font-bold">{scoreData.hitsCount || 0}</div>
                 </div>
                 <div>
                   <span className="text-gray-500">Top Quote Score:</span>
-                  <div className="font-mono font-bold">{scoreData.topQuoteScore?.toFixed(4) || '0.0000'}</div>
+                  <div className=" font-bold">{scoreData.topQuoteScore?.toFixed(4) || '0.0000'}</div>
                 </div>
                 <div>
                   <span className="text-gray-500">Match Rate:</span>
-                  <div className="font-mono font-bold">
+                  <div className=" font-bold">
                     {scoreData.totalBookQuotes > 0
                       ? `${((scoreData.hitsCount / scoreData.totalBookQuotes) * 100).toFixed(1)}%`
                       : 'N/A'}
@@ -367,7 +367,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
               <div className="font-semibold text-gray-600 mb-1">BM25 Text Relevance</div>
               <div className="text-xs">
                 <span className="text-gray-500">Score (×{scoreData.config?.bm25_weight || 1.0}):</span>
-                <span className="font-mono font-bold text-blue-600 ml-2">{scoreData.scoreBreakdown.bm25_normalized?.toFixed(4) || '0.0000'}</span>
+                <span className=" font-bold text-blue-600 ml-2">{scoreData.scoreBreakdown.bm25_normalized?.toFixed(4) || '0.0000'}</span>
               </div>
             </div>
 
@@ -376,7 +376,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
               <div className="font-semibold text-gray-600 mb-1">Field Matching Score</div>
               <div className="text-xs">
                 <span className="text-gray-500">Total weighted:</span>
-                <span className="font-mono font-bold ml-2">{scoreData.scoreBreakdown.field_score?.toFixed(4) || '0.0000'}</span>
+                <span className=" font-bold ml-2">{scoreData.scoreBreakdown.field_score?.toFixed(4) || '0.0000'}</span>
               </div>
 
               {/* Field Matches Breakdown */}
@@ -387,7 +387,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
                     {Object.entries(scoreData.scoreBreakdown.field_matches).map(([field, weightedValue]) => (
                       <div key={field} className="flex justify-between text-xs">
                         <span className="text-gray-700 font-medium">{field.replace(/_/g, ' ')}:</span>
-                        <span className="font-mono font-bold text-green-700">+{weightedValue?.toFixed(3)}</span>
+                        <span className=" font-bold text-green-700">+{weightedValue?.toFixed(3)}</span>
                       </div>
                     ))}
                   </div>
@@ -404,7 +404,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
               <div className="font-semibold text-gray-600 mb-1">Phrase Match Bonus</div>
               <div className="text-xs">
                 <span className="text-gray-500">Weighted Value:</span>
-                <span className="font-mono font-bold ml-2">
+                <span className=" font-bold ml-2">
                   {scoreData.scoreBreakdown.phrase_bonus > 0
                     ? <span className="text-orange-600">+{scoreData.scoreBreakdown.phrase_bonus?.toFixed(4)}</span>
                     : <span className="text-gray-400">0.0000</span>}
@@ -416,7 +416,7 @@ const ScorePanel = ({ book, query, bookPosition, searchResult }) => {
             <div className="mt-3 pt-2 bg-gray-50 p-2 rounded">
               <div className="text-center">
                 <div className="text-xs text-gray-600 mb-2">Score Components</div>
-                <div className="text-xs font-mono space-y-1">
+                <div className="text-xs  space-y-1">
                   <div>BM25: {scoreData.scoreBreakdown.bm25_normalized?.toFixed(4) || '0.0000'}</div>
                   <div>Fields: {scoreData.scoreBreakdown.field_score?.toFixed(4) || '0.0000'}</div>
                   {scoreData.scoreBreakdown.phrase_bonus > 0 && (
@@ -659,6 +659,24 @@ function App() {
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [toast, setToast] = useState({ message: '', visible: false });
   const [expertMode, setExpertMode] = useState(false);
+  const [clickSequence, setClickSequence] = useState([]);
+
+  // Expert mode activation: Click on title 5 times within 3 seconds
+  const handleTitleClick = () => {
+    const now = Date.now();
+    const newSequence = [...clickSequence, now].filter(timestamp => now - timestamp < 3000);
+    setClickSequence(newSequence);
+
+    if (newSequence.length >= 5) {
+      setExpertMode(!expertMode);
+      setToast({
+        message: expertMode ? '[expert mode disabled]' : '[expert mode enabled]',
+        visible: true
+      });
+      setTimeout(() => setToast({ message: '', visible: false }), 2000);
+      setClickSequence([]);
+    }
+  };
 
   const BOOKS_PER_PAGE = 10;
   const totalPages = Math.ceil(total / BOOKS_PER_PAGE);
@@ -867,14 +885,20 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-white text-black font-mono p-4 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-white text-black  p-4 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8 pb-6 border-b-2 border-black">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold mb-2">THE LIBRARY</h1>
-            <p className="text-gray-600 italic">Semantic Quote Search Server</p>
-            {expertMode && <p className="text-xs text-red-600 font-mono">API: {API_URL} - UPDATED</p>}
+            <h1
+              className="text-2xl font-bold mb-2 cursor-pointer select-none"
+              onClick={handleTitleClick}
+              title="Click 5 times quickly to toggle expert mode"
+            >
+              THE LIBRARY
+            </h1>
+            <p className="text-gray-600 italic">Retcon Black Mountain Tool</p>
+            {expertMode && <p className="text-xs text-red-600 ">API: {API_URL} - UPDATED</p>}
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
@@ -903,16 +927,6 @@ function App() {
               </div>
             )}
 
-            <button
-              onClick={() => setExpertMode(!expertMode)}
-              className={`text-sm px-3 py-1 border rounded transition-colors ${
-                expertMode
-                  ? 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100'
-                  : 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
-              }`}
-            >
-              {expertMode ? 'Regular Mode' : 'Expert Mode'}
-            </button>
           </div>
         </div>
       </div>
@@ -952,7 +966,7 @@ function App() {
       {/* Footer */}
       <div className="mt-16 pt-6 border-t-2 border-gray-200">
         <p className="text-sm text-gray-500 text-center italic">
-          Optimized for Raspberry Pi 4 • Monospace Typography
+          Retcon Black Mountain
         </p>
       </div>
 

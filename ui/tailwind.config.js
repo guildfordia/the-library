@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'mono': ['Courier New', 'monospace'],
+        'mono': ['Arial Black', 'Arial', 'sans-serif'],
       }
     },
   },
