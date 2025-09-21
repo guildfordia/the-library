@@ -202,9 +202,6 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
                 <span className="italic">{highlightSearchTerms(quote.quote_text, query)}</span>
                 <span className="text-2xl text-gray-300 ml-1">"</span>
               </blockquote>
-              <div className="text-xs text-gray-500 mb-2 italic">
-                Keywords: {highlightSearchTerms(quote.keywords || "No keywords", query)}
-              </div>
               <div className="flex justify-between items-center">
                 {(quote.page || quote.section) && (
                   <div className="text-sm text-gray-500">
@@ -667,6 +664,9 @@ function App() {
     const newSequence = [...clickSequence, now].filter(timestamp => now - timestamp < 3000);
     setClickSequence(newSequence);
 
+    // Debug log
+    console.log('Title clicked, sequence length:', newSequence.length);
+
     if (newSequence.length >= 5) {
       setExpertMode(!expertMode);
       setToast({
@@ -891,13 +891,16 @@ function App() {
         <div className="flex justify-between items-start">
           <div>
             <h1
-              className="text-2xl font-bold mb-2 cursor-pointer select-none"
+              className="text-2xl font-bold mb-2 cursor-pointer select-none hover:text-gray-700 transition-colors"
               onClick={handleTitleClick}
-              title="Click 5 times quickly to toggle expert mode"
+              title={`Click 5 times quickly to toggle expert mode (${clickSequence.length}/5)`}
+              style={{ userSelect: 'none' }}
             >
-              THE LIBRARY
+              THE LIBRARY {clickSequence.length > 0 && clickSequence.length < 5 && (
+                <span className="text-xs text-gray-400">({clickSequence.length}/5)</span>
+              )}
             </h1>
-            <p className="text-gray-600 italic">Retcon Black Mountain Tool</p>
+            <p className="text-gray-600 italic">A Black Mountain Retcon Tool</p>
             {expertMode && <p className="text-xs text-red-600 ">API: {API_URL} - UPDATED</p>}
           </div>
 
