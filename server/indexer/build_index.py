@@ -28,23 +28,28 @@ def setup_database(db_path: str) -> sqlite3.Connection:
 def create_tables(conn: sqlite3.Connection):
     """Create books and quotes tables with FTS5 virtual table"""
 
-    # Books table - NOTE: Using CSV structure from data/biblio/final_biblio_EXCELLENCE_FINALE.csv
+    # Books table - Updated to match actual CSV structure from bibliography.final.with_annots.flat.csv
     conn.execute("""
     CREATE TABLE IF NOT EXISTS books (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         authors TEXT,
         year INTEGER,
-        publisher TEXT,
-        journal TEXT,
         doi TEXT,
-        isbn TEXT,
-        themes TEXT,
-        keywords TEXT,
-        summary TEXT,
-        iso690 TEXT,
-        source_file TEXT,
-        file_path TEXT
+        container TEXT,
+        volume TEXT,
+        issue TEXT,
+        pages TEXT,
+        publisher TEXT,
+        issn TEXT,
+        source_path TEXT,
+        meta_title TEXT,
+        meta_author TEXT,
+        web_url_guess TEXT,
+        domain_guess TEXT,
+        doc_summary TEXT,
+        doc_keywords TEXT,
+        highlight_count INTEGER
     )
     """)
 
@@ -77,8 +82,8 @@ def create_tables(conn: sqlite3.Connection):
 def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]:
     """
     Load books from CSV file.
-    NOTE: CSV structure based on actual file at data/biblio/final_biblio_EXCELLENCE_FINALE.csv
-    Returns mapping of source_file -> book_id for linking with extracts
+    Updated to use actual CSV structure from bibliography.final.with_annots.flat.csv
+    Returns mapping of source_path -> book_id for linking with extracts
     """
 
     if not os.path.exists(csv_path):
@@ -91,38 +96,53 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
         reader = csv.DictReader(f)
 
         for row in reader:
-            # Extract relevant fields from the extensive CSV structure
+            # Skip empty rows
+            if not row.get('title') and not row.get('source_path'):
+                continue
+
+            # Extract relevant fields using actual CSV column names
             cursor = conn.cursor()
             cursor.execute("""
-            INSERT INTO books (title, authors, year, publisher, journal, doi, isbn,
-                             themes, keywords, summary, iso690, source_file, file_path)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO books (title, authors, year, doi, container, volume, issue, pages,
+                             publisher, issn, source_path, meta_title, meta_author,
+                             web_url_guess, domain_guess, doc_summary, doc_keywords, highlight_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                row.get('final_verified_title') or row.get('title', ''),
-                row.get('final_verified_authors') or row.get('author_final', ''),
+                row.get('title', ''),
+                row.get('authors', ''),
                 int(float(row['year'])) if row.get('year') and str(row['year']).replace('.', '').replace('-', '').isdigit() else None,
-                row.get('final_verified_publisher') or row.get('publisher', ''),
-                row.get('journal', ''),
-                row.get('DOI') or row.get('doi', ''),
-                row.get('isbn_13') or row.get('isbn', ''),
-                row.get('theme', ''),
-                row.get('keywords', ''),
-                row.get('summary', ''),
-                row.get('biblio_iso690_finale') or row.get('biblio_fr_iso690', ''),
-                row.get('source_file', ''),
-                row.get('file_path', '')
+                row.get('doi', ''),
+                row.get('container', ''),
+                row.get('volume', ''),
+                row.get('issue', ''),
+                row.get('pages', ''),
+                row.get('publisher', ''),
+                row.get('issn', ''),
+                row.get('source_path', ''),
+                row.get('meta_title', ''),
+                row.get('meta_author', ''),
+                row.get('web_url_guess', ''),
+                row.get('domain_guess', ''),
+                row.get('doc_summary', ''),
+                row.get('doc_keywords', ''),
+                int(row.get('highlight_count', 0)) if row.get('highlight_count') and str(row.get('highlight_count')).isdigit() else 0
             ))
 
             book_id = cursor.lastrowid
 
-            # Map by filename for linking with extracts
-            # Use title as fallback since file_path may not exist in CSV
-            if row.get('file_path'):
-                filename = Path(row['file_path']).stem
+            # Create mapping for linking with extracts using source_path
+            source_path = row.get('source_path', '')
+            if source_path:
+                # Extract filename from path for matching
+                filename = Path(source_path).stem
                 book_mapping[filename] = book_id
-            elif row.get('title'):
-                # Use title as mapping key for fuzzy matching
-                title = row['title'].strip()
+
+                # Also map by full path
+                book_mapping[source_path] = book_id
+
+            # Also map by title for fallback matching
+            title = row.get('title', '').strip()
+            if title:
                 book_mapping[title] = book_id
 
     conn.commit()
@@ -155,25 +175,39 @@ def load_quotes(conn: sqlite3.Connection, extracts_dir: str, book_mapping: Dict[
             with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # Extract book identifier from filename or path
+            # Extract book identifier from filename or path in JSON
             json_stem = extract_filename_from_json(json_file.name)
+            json_source_path = data.get('file', '')
 
-            # Try to find matching book
+            # Try to find matching book using multiple strategies
             book_id = None
 
-            # First try direct filename match
-            if json_stem in book_mapping:
+            # Strategy 1: Match by source_path from JSON file content to CSV source_path
+            if json_source_path and json_source_path in book_mapping:
+                book_id = book_mapping[json_source_path]
+
+            # Strategy 2: Match by filename extracted from JSON source_path to CSV source_path filename
+            elif json_source_path:
+                json_filename = Path(json_source_path).stem
+                if json_filename in book_mapping:
+                    book_id = book_mapping[json_filename]
+
+            # Strategy 3: Direct filename match from JSON filename
+            elif json_stem in book_mapping:
                 book_id = book_mapping[json_stem]
-            else:
-                # Try fuzzy matching on available book titles
-                # This is a fallback since biblio->extracts mapping isn't implemented yet
+
+            # Strategy 4: Fuzzy matching on available book titles and paths
+            if not book_id:
                 for book_key, mapped_id in book_mapping.items():
-                    if book_key.lower() in json_stem.lower() or json_stem.lower() in book_key.lower():
+                    # Try matching against various parts of the paths and titles
+                    if (book_key.lower() in json_stem.lower() or
+                        json_stem.lower() in book_key.lower() or
+                        (json_source_path and book_key.lower() in json_source_path.lower())):
                         book_id = mapped_id
                         break
 
             if not book_id:
-                # Create placeholder book entry for now
+                # Create placeholder book entry for books not found in CSV
                 cursor = conn.cursor()
 
                 # Extract title from the file path in JSON if available
@@ -181,9 +215,9 @@ def load_quotes(conn: sqlite3.Connection, extracts_dir: str, book_mapping: Dict[
                 title = Path(source_path).stem if source_path else json_stem
 
                 cursor.execute("""
-                INSERT INTO books (title, source_file, file_path)
-                VALUES (?, ?, ?)
-                """, (title, str(json_file), source_path))
+                INSERT INTO books (title, source_path)
+                VALUES (?, ?)
+                """, (title, source_path))
 
                 book_id = cursor.lastrowid
                 unknown_books.add(json_stem)
@@ -282,8 +316,8 @@ def main():
 
             create_tables(conn)
 
-            # Load data
-            biblio_path = os.path.join(args.data_dir, "biblio", "bibliographie_finale_these_FINAL_translated.csv")
+            # Load data - Use the actual CSV file that exists
+            biblio_path = os.path.join(args.data_dir, "biblio", "bibliography.final.with_annots.flat.csv")
             extracts_dir = os.path.join(args.data_dir, "extracts")
 
             book_mapping = load_bibliography(conn, biblio_path)
