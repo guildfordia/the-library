@@ -93,12 +93,27 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
     book_mapping = {}
 
     with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
+        # CSV uses semicolon delimiter
+        reader = csv.DictReader(f, delimiter=';')
 
         for row in reader:
+            # CSV uses *_out suffix for most fields
+            title = row.get('title_out', '') or row.get('title_in', '') or row.get('title', '')
+            authors = row.get('authors_out', '') or row.get('authors_in', '') or row.get('authors', '')
+            source_path = row.get('source_path', '')
+
             # Skip empty rows
-            if not row.get('title') and not row.get('source_path'):
+            if not title and not source_path:
                 continue
+
+            # Extract year
+            year_str = row.get('year_out', '') or row.get('year_in', '') or row.get('year', '')
+            year = None
+            if year_str and str(year_str).replace('.', '').replace('-', '').isdigit():
+                try:
+                    year = int(float(year_str))
+                except:
+                    pass
 
             # Extract relevant fields using actual CSV column names
             cursor = conn.cursor()
@@ -108,24 +123,24 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
                              web_url_guess, domain_guess, doc_summary, doc_keywords, highlight_count)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                row.get('title', ''),
-                row.get('authors', ''),
-                int(float(row['year'])) if row.get('year') and str(row['year']).replace('.', '').replace('-', '').isdigit() else None,
-                row.get('doi', ''),
-                row.get('container', ''),
-                row.get('volume', ''),
-                row.get('issue', ''),
-                row.get('pages', ''),
-                row.get('publisher', ''),
-                row.get('issn', ''),
-                row.get('source_path', ''),
+                title,
+                authors,
+                year,
+                row.get('doi_out', '') or row.get('doi_in', '') or row.get('doi', ''),
+                row.get('container_out', '') or row.get('container', ''),
+                row.get('volume_out', '') or row.get('volume', ''),
+                row.get('issue_out', '') or row.get('issue', ''),
+                row.get('pages_out', '') or row.get('pages', ''),
+                row.get('publisher_out', '') or row.get('publisher', ''),
+                row.get('issn_out', '') or row.get('issn', ''),
+                source_path,
                 row.get('meta_title', ''),
                 row.get('meta_author', ''),
-                row.get('web_url_guess', ''),
+                row.get('pdf_url', '') or row.get('url_out', '') or row.get('web_url_guess', ''),
                 row.get('domain_guess', ''),
-                row.get('doc_summary', ''),
-                row.get('doc_keywords', ''),
-                int(row.get('highlight_count', 0)) if row.get('highlight_count') and str(row.get('highlight_count')).isdigit() else 0
+                row.get('abstract_en', '') or row.get('doc_summary', ''),
+                row.get('Keywords', '') or row.get('doc_keywords', ''),
+                0  # highlight_count will be calculated
             ))
 
             book_id = cursor.lastrowid
