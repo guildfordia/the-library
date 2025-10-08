@@ -907,7 +907,7 @@ function App() {
                 <span className="text-xs text-gray-400">({clickSequence.length}/5)</span>
               )}
             </h1>
-            <p className="text-gray-600 italic">A Black Mountain Retcon Tool</p>
+            <p className="text-gray-600 italic">A Retcon Black Mountain Tool</p>
             {expertMode && <p className="text-xs text-red-600 ">API: {API_URL} - UPDATED</p>}
           </div>
 
