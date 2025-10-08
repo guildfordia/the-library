@@ -572,9 +572,10 @@ const ResultsList = ({
   onCopy,
   onExportCitation,
   onCopyCitation,
-  expertMode
+  expertMode,
+  hasSearched
 }) => {
-  if (results.length === 0) {
+  if (results.length === 0 && hasSearched) {
     return (
       <div className="text-center py-12">
         <p className="text-lg text-gray-600">No matches found</p>
@@ -583,6 +584,10 @@ const ResultsList = ({
         </p>
       </div>
     );
+  }
+
+  if (results.length === 0) {
+    return null;
   }
 
   return (
@@ -657,6 +662,7 @@ function App() {
   const [toast, setToast] = useState({ message: '', visible: false });
   const [expertMode, setExpertMode] = useState(false);
   const [clickSequence, setClickSequence] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Expert mode activation: Click on title 5 times within 3 seconds
   const handleTitleClick = () => {
@@ -688,6 +694,7 @@ function App() {
     setCurrentPage(1);
     setExpandedBookId(null);
     setExpandedPanel(null);
+    setHasSearched(true);
 
     try {
       const offset = 0;
@@ -960,6 +967,7 @@ function App() {
           expandedPanel={expandedPanel}
           onPanelToggle={handlePanelToggle}
           onCopy={handleCopy}
+          hasSearched={hasSearched}
           onExportCitation={handleExportCitation}
           onCopyCitation={handleCopyCitation}
           expertMode={expertMode}
