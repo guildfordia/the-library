@@ -162,10 +162,10 @@ class QuoteScorer:
         SELECT
             q.id, q.book_id, q.quote_text, q.page, q.keywords as quote_keywords, q.source_file,
             fts.rank as base_bm25_score,
-            b.title as book_title, b.authors as book_authors, b.keywords as book_keywords,
-            b.themes, b.summary, b.publisher, b.journal,
+            b.title as book_title, b.authors as book_authors, b.doc_keywords as book_keywords,
+            b.doc_summary as summary, b.publisher, b.container,
             CASE
-                WHEN b.journal IS NOT NULL AND b.journal != '' THEN 'journal'
+                WHEN b.container IS NOT NULL AND b.container != '' THEN 'journal'
                 WHEN b.publisher IS NOT NULL AND b.publisher != '' THEN 'book'
                 ELSE 'unknown'
             END as book_type

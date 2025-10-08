@@ -132,7 +132,7 @@ async def get_book_citation(
 
         cursor = conn.cursor()
         cursor.execute("""
-        SELECT title, authors, year, publisher, journal, doi, isbn, iso690
+        SELECT title, authors, year, publisher, container, doi, issn, source_path
         FROM books WHERE id = ?
         """, (book_id,))
 
@@ -142,25 +142,22 @@ async def get_book_citation(
         if not book:
             raise HTTPException(status_code=404, detail="Book not found")
 
-        # Use ISO690 if available, otherwise generate basic citation
-        if book['iso690']:
-            citation = book['iso690']
-        else:
-            parts = []
-            if book['authors']:
-                parts.append(book['authors'])
-            if book['title']:
-                parts.append(f'"{book["title"]}"')
-            if book['journal']:
-                parts.append(f"<i>{book['journal']}</i>")
-            elif book['publisher']:
-                parts.append(book['publisher'])
-            if book['year']:
-                parts.append(str(book['year']))
-            if book['doi']:
-                parts.append(f"DOI: {book['doi']}")
+        # Generate basic citation
+        parts = []
+        if book['authors']:
+            parts.append(book['authors'])
+        if book['title']:
+            parts.append(f'"{book["title"]}"')
+        if book['container']:
+            parts.append(f"<i>{book['container']}</i>")
+        elif book['publisher']:
+            parts.append(book['publisher'])
+        if book['year']:
+            parts.append(str(book['year']))
+        if book['doi']:
+            parts.append(f"DOI: {book['doi']}")
 
-            citation = ". ".join(parts) + "." if parts else "Citation unavailable"
+        citation = ". ".join(parts) + "." if parts else "Citation unavailable"
 
         return {"citation": citation}
 
