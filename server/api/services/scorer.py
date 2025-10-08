@@ -272,14 +272,14 @@ class QuoteScorer:
         # Fetch book metadata with total quotes count
         placeholders = ','.join('?' * len(book_ids))
         book_sql = f"""
-        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.journal, b.doi, b.isbn,
-               b.themes, b.keywords, b.summary, b.iso690, b.source_file, b.file_path,
+        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+               b.doc_keywords, b.doc_summary, b.source_path,
                COUNT(q.id) as total_quotes
         FROM books b
         LEFT JOIN quotes q ON b.id = q.book_id
         WHERE b.id IN ({placeholders})
-        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.journal, b.doi, b.isbn,
-                 b.themes, b.keywords, b.summary, b.iso690, b.source_file, b.file_path
+        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+                 b.doc_keywords, b.doc_summary, b.source_path
         """
 
         cursor = conn.cursor()
@@ -327,14 +327,14 @@ class QuoteScorer:
         # Fetch book metadata
         placeholders = ','.join('?' * len(book_ids))
         book_sql = f"""
-        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.journal, b.doi, b.isbn,
-               b.themes, b.keywords, b.summary, b.iso690, b.source_file, b.file_path,
+        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+               b.doc_keywords, b.doc_summary, b.source_path,
                COUNT(q.id) as total_quotes
         FROM books b
         LEFT JOIN quotes q ON b.id = q.book_id
         WHERE b.id IN ({placeholders})
-        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.journal, b.doi, b.isbn,
-                 b.themes, b.keywords, b.summary, b.iso690, b.source_file, b.file_path
+        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+                 b.doc_keywords, b.doc_summary, b.source_path
         """
 
         cursor = conn.cursor()
