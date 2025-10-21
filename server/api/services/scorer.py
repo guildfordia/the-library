@@ -273,13 +273,13 @@ class QuoteScorer:
         # Fetch book metadata with total quotes count
         placeholders = ','.join('?' * len(book_ids))
         book_sql = f"""
-        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
                b.doc_keywords, b.doc_summary, b.source_path,
                COUNT(q.id) as total_quotes
         FROM books b
         LEFT JOIN quotes q ON b.id = q.book_id
         WHERE b.id IN ({placeholders})
-        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
                  b.doc_keywords, b.doc_summary, b.source_path
         """
 
@@ -328,13 +328,13 @@ class QuoteScorer:
         # Fetch book metadata
         placeholders = ','.join('?' * len(book_ids))
         book_sql = f"""
-        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
                b.doc_keywords, b.doc_summary, b.source_path,
                COUNT(q.id) as total_quotes
         FROM books b
         LEFT JOIN quotes q ON b.id = q.book_id
         WHERE b.id IN ({placeholders})
-        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.doi, b.issn,
+        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
                  b.doc_keywords, b.doc_summary, b.source_path
         """
 

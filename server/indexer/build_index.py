@@ -28,7 +28,7 @@ def setup_database(db_path: str) -> sqlite3.Connection:
 def create_tables(conn: sqlite3.Connection):
     """Create books and quotes tables with FTS5 virtual table"""
 
-    # Books table - Updated to match actual CSV structure from bibliography.final.with_annots.flat.csv
+    # Books table - Updated to match FINAL_BIBLIO_ATLANTA.csv structure
     conn.execute("""
     CREATE TABLE IF NOT EXISTS books (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,6 +37,7 @@ def create_tables(conn: sqlite3.Connection):
         year INTEGER,
         doi TEXT,
         container TEXT,
+        entry_type TEXT,
         volume TEXT,
         issue TEXT,
         pages TEXT,
@@ -118,16 +119,17 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
             # Extract relevant fields using FINAL_BIBLIO_ATLANTA.csv column names
             cursor = conn.cursor()
             cursor.execute("""
-            INSERT INTO books (title, authors, year, doi, container, volume, issue, pages,
+            INSERT INTO books (title, authors, year, doi, container, entry_type, volume, issue, pages,
                              publisher, issn, source_path, meta_title, meta_author,
                              web_url_guess, domain_guess, doc_summary, doc_keywords, highlight_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 title,
                 authors,
                 year,
                 row.get('doi', '').strip(),
                 row.get('container', '').strip() or row.get('journal', '').strip(),
+                row.get('entry_type', '').strip(),
                 row.get('volume', '').strip(),
                 row.get('issue', '').strip(),
                 row.get('pages', '').strip(),

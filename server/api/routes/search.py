@@ -31,6 +31,7 @@ class BookResult(BaseModel):
     journal: Optional[str]
     doi: Optional[str]
     isbn: Optional[str]
+    type: Optional[str]
     themes: Optional[str]
     keywords: Optional[str]
     summary: Optional[str]
@@ -118,7 +119,8 @@ async def search_quotes(
                 journal=book_data.get("container"),  # Map container -> journal
                 doi=book_data.get("doi"),
                 isbn=book_data.get("issn"),  # Map issn -> isbn
-                themes=None,  # Not in database
+                type=book_data.get("entry_type"),  # Map entry_type -> type (article, book, etc.)
+                themes=book_data.get("container"),  # Map container -> themes (publication/journal as theme)
                 keywords=book_data.get("doc_keywords"),  # Map doc_keywords -> keywords
                 summary=book_data.get("doc_summary"),  # Map doc_summary -> summary
                 iso690=None  # Not implemented yet
