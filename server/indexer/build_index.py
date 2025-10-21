@@ -332,7 +332,7 @@ def main():
             create_tables(conn)
 
             # Load data - Use the actual CSV file that exists
-            biblio_path = os.path.join(args.data_dir, "biblio", "bibliography.final.with_annots.flat.csv")
+            biblio_path = os.path.join(args.data_dir, "biblio", "FINAL_BIBLIO_ATLANTA.csv")
             extracts_dir = os.path.join(args.data_dir, "extracts")
 
             book_mapping = load_bibliography(conn, biblio_path)
