@@ -72,5 +72,5 @@ services:
 
 networks:
   rbm-network:
-    name: retcon-bm_rbm-network
+    name: root_rbm-network
     external: true
