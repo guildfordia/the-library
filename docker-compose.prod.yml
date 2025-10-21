@@ -17,10 +17,11 @@ services:
     networks:
       - rbm-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
 
   library-ui:
     build:
@@ -37,10 +38,11 @@ services:
     networks:
       - rbm-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 10s
 
   library-nginx:
     image: nginx:alpine
