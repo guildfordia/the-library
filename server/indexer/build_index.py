@@ -97,17 +97,17 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
         reader = csv.DictReader(f, delimiter=';')
 
         for row in reader:
-            # CSV uses *_out suffix for most fields
-            title = row.get('title_out', '') or row.get('title_in', '') or row.get('title', '')
-            authors = row.get('authors_out', '') or row.get('authors_in', '') or row.get('authors', '')
-            source_path = row.get('source_path', '')
+            # FINAL_BIBLIO_ATLANTA.csv has simple column names (no _out/_in suffix)
+            title = row.get('title', '').strip()
+            authors = row.get('authors', '').strip()
+            source_path = row.get('source_path', '').strip()
 
             # Skip empty rows
             if not title and not source_path:
                 continue
 
             # Extract year
-            year_str = row.get('year_out', '') or row.get('year_in', '') or row.get('year', '')
+            year_str = row.get('year', '').strip()
             year = None
             if year_str and str(year_str).replace('.', '').replace('-', '').isdigit():
                 try:
@@ -115,7 +115,7 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
                 except:
                     pass
 
-            # Extract relevant fields using actual CSV column names
+            # Extract relevant fields using FINAL_BIBLIO_ATLANTA.csv column names
             cursor = conn.cursor()
             cursor.execute("""
             INSERT INTO books (title, authors, year, doi, container, volume, issue, pages,
@@ -126,20 +126,20 @@ def load_bibliography(conn: sqlite3.Connection, csv_path: str) -> Dict[str, int]
                 title,
                 authors,
                 year,
-                row.get('doi_out', '') or row.get('doi_in', '') or row.get('doi', ''),
-                row.get('container_out', '') or row.get('container', ''),
-                row.get('volume_out', '') or row.get('volume', ''),
-                row.get('issue_out', '') or row.get('issue', ''),
-                row.get('pages_out', '') or row.get('pages', ''),
-                row.get('publisher_out', '') or row.get('publisher', ''),
-                row.get('issn_out', '') or row.get('issn', ''),
+                row.get('doi', '').strip(),
+                row.get('container', '').strip() or row.get('journal', '').strip(),
+                row.get('volume', '').strip(),
+                row.get('issue', '').strip(),
+                row.get('pages', '').strip(),
+                row.get('publisher', '').strip(),
+                row.get('isbn', '').strip(),
                 source_path,
-                row.get('meta_title', ''),
-                row.get('meta_author', ''),
-                row.get('pdf_url', '') or row.get('url_out', '') or row.get('web_url_guess', ''),
-                row.get('domain_guess', ''),
-                row.get('abstract_en', '') or row.get('doc_summary', ''),
-                row.get('Keywords', '') or row.get('doc_keywords', ''),
+                row.get('source_title', '').strip(),
+                authors,  # Use authors as meta_author fallback
+                row.get('url', '').strip(),
+                '',  # domain_guess not in CSV
+                row.get('abstract', '').strip(),
+                row.get('keywords', '').strip(),
                 0  # highlight_count will be calculated
             ))
 

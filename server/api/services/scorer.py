@@ -75,7 +75,7 @@ class QuoteScorer:
             SELECT
                 q.id, q.quote_text, q.page, q.section, q.keywords, q.source_file,
                 b.id as book_id, b.title, b.authors, b.year, b.publisher,
-                b.journal, b.doi, b.isbn, b.themes, b.summary, b.iso690
+                b.container as journal, b.doi, b.issn as isbn, b.doc_summary as summary, b.doc_keywords as keywords
             FROM quotes q
             JOIN books b ON q.book_id = b.id
             WHERE q.id = ?
@@ -103,10 +103,11 @@ class QuoteScorer:
                     "journal": row['journal'],
                     "doi": row['doi'],
                     "isbn": row['isbn'],
-                    "themes": row['themes'],
-                    "summary": row['summary']
+                    "themes": None,  # Not in database
+                    "summary": row['summary'],
+                    "keywords": row['keywords']
                 },
-                "citation": row['iso690'] or self._generate_basic_citation(row)
+                "citation": self._generate_basic_citation(row)
             }
 
     def _search_quotes(self, conn: sqlite3.Connection, fts_query: str,

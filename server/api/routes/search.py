@@ -115,13 +115,13 @@ async def search_quotes(
                 authors=book_data.get("authors"),
                 year=book_data.get("year"),
                 publisher=book_data.get("publisher"),
-                journal=book_data.get("journal"),
+                journal=book_data.get("container"),  # Map container -> journal
                 doi=book_data.get("doi"),
-                isbn=book_data.get("isbn"),
-                themes=book_data.get("themes"),
-                keywords=book_data.get("keywords"),
-                summary=book_data.get("summary"),
-                iso690=book_data.get("iso690")
+                isbn=book_data.get("issn"),  # Map issn -> isbn
+                themes=None,  # Not in database
+                keywords=book_data.get("doc_keywords"),  # Map doc_keywords -> keywords
+                summary=book_data.get("doc_summary"),  # Map doc_summary -> summary
+                iso690=None  # Not implemented yet
             )
 
             quote_results = []
