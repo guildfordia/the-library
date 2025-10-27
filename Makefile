@@ -45,17 +45,17 @@ clean: down
 	docker compose build --no-cache
 	docker compose up -d
 
-# Production commands
+# Production commands (use prod file only - base file has naming conflicts)
 prod-up:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+	docker compose -f docker-compose.prod.yml up -d
 
 prod-down:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+	docker compose -f docker-compose.prod.yml down
 
 prod-restart: prod-down prod-up
 
 prod-logs:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
+	docker compose -f docker-compose.prod.yml logs -f
 
 # Remote deployment
 deploy-remote:
