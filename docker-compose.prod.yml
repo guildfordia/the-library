@@ -15,7 +15,7 @@ services:
       - PYTHONPATH=/app
     restart: unless-stopped
     networks:
-      - rbm-network
+      - library-network
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -36,7 +36,7 @@ services:
       - library-api
     restart: unless-stopped
     networks:
-      - rbm-network
+      - library-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000"]
       interval: 30s
@@ -56,7 +56,8 @@ services:
       - library-ui
     restart: unless-stopped
     networks:
-      - rbm-network
+      - traefik-public
+      - library-network
     labels:
       - traefik.enable=true
       - traefik.http.routers.library.rule=Host(`thelibrary.retconblackmountain.info`)
@@ -71,6 +72,11 @@ services:
       start_period: 10s
 
 networks:
-  rbm-network:
-    name: root_rbm-network
+  # Internal network for library services only
+  library-network:
+    driver: bridge
+
+  # External shared network for Traefik routing
+  # This network is shared across all apps on the server
+  traefik-public:
     external: true
