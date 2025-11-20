@@ -6,7 +6,7 @@ import sqlite3
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import search, quotes, books, tuning, expert
+from api.routes import search, quotes, books, tuning, expert, edits, conflicts, export
 
 app = FastAPI(
     title="The Library API",
@@ -27,6 +27,9 @@ app.include_router(quotes.router, prefix="/quotes", tags=["quotes"])
 app.include_router(books.router, prefix="/books", tags=["books"])
 app.include_router(tuning.router, prefix="/tuning", tags=["tuning"])
 app.include_router(expert.router, prefix="/expert", tags=["expert"])
+app.include_router(edits.router, prefix="/edits", tags=["edits"])
+app.include_router(conflicts.router, prefix="/admin", tags=["admin"])
+app.include_router(export.router, prefix="/admin", tags=["admin"])
 
 @app.get("/")
 async def root():

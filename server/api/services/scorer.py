@@ -88,24 +88,52 @@ class QuoteScorer:
             if not row:
                 return None
 
-            return {
+            # Import editor locally to avoid circular dependency
+            from api.services.editor import editor
+
+            # Apply edits overlay to quote
+            quote_data = {
                 "id": row['id'],
                 "quote_text": row['quote_text'],
                 "page": row['page'],
                 "section": row['section'],
-                "keywords": row['keywords'],
+                "keywords": row['keywords']
+            }
+            quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
+
+            # Apply edits overlay to book
+            book_data = {
+                "id": row['book_id'],
+                "title": row['title'],
+                "authors": row['authors'],
+                "year": row['year'],
+                "publisher": row['publisher'],
+                "journal": row['journal'],
+                "doi": row['doi'],
+                "isbn": row['isbn'],
+                "summary": row['summary'],
+                "keywords": row['keywords']
+            }
+            book_with_edits = editor.apply_edits('book', row['book_id'], book_data)
+
+            return {
+                "id": quote_with_edits['id'],
+                "quote_text": quote_with_edits['quote_text'],
+                "page": quote_with_edits.get('page'),
+                "section": quote_with_edits.get('section'),
+                "keywords": quote_with_edits.get('keywords'),
                 "book": {
-                    "id": row['book_id'],
-                    "title": row['title'],
-                    "authors": row['authors'],
-                    "year": row['year'],
-                    "publisher": row['publisher'],
-                    "journal": row['journal'],
-                    "doi": row['doi'],
-                    "isbn": row['isbn'],
+                    "id": book_with_edits['id'],
+                    "title": book_with_edits.get('title'),
+                    "authors": book_with_edits.get('authors'),
+                    "year": book_with_edits.get('year'),
+                    "publisher": book_with_edits.get('publisher'),
+                    "journal": book_with_edits.get('journal'),
+                    "doi": book_with_edits.get('doi'),
+                    "isbn": book_with_edits.get('isbn'),
                     "themes": None,  # Not in database
-                    "summary": row['summary'],
-                    "keywords": row['keywords']
+                    "summary": book_with_edits.get('summary'),
+                    "keywords": book_with_edits.get('keywords')
                 },
                 "citation": self._generate_basic_citation(row)
             }
@@ -119,11 +147,11 @@ class QuoteScorer:
         sql = """
         SELECT
             q.id, q.book_id, q.quote_text, q.page, q.keywords, q.source_file,
-            fts.rank as bm25_score
+            bm25(quotes_fts) as bm25_score
         FROM quotes_fts fts
         JOIN quotes q ON q.id = fts.rowid
         WHERE quotes_fts MATCH ?
-        ORDER BY fts.rank
+        ORDER BY bm25(quotes_fts)
         LIMIT 1000
         """
 
@@ -162,7 +190,7 @@ class QuoteScorer:
         sql = """
         SELECT
             q.id, q.book_id, q.quote_text, q.page, q.keywords as quote_keywords, q.source_file,
-            fts.rank as base_bm25_score,
+            bm25(quotes_fts) as base_bm25_score,
             b.title as book_title, b.authors as book_authors, b.doc_keywords as book_keywords,
             b.doc_summary as summary, b.publisher, b.container,
             CASE
@@ -174,7 +202,7 @@ class QuoteScorer:
         JOIN quotes q ON q.id = fts.rowid
         JOIN books b ON q.book_id = b.id
         WHERE quotes_fts MATCH ?
-        ORDER BY fts.rank
+        ORDER BY bm25(quotes_fts)
         LIMIT 1000
         """
 
@@ -288,14 +316,19 @@ class QuoteScorer:
         book_rows = cursor.fetchall()
         books_lookup = {row['id']: dict(row) for row in book_rows}
 
+        # Import editor locally to avoid circular dependency
+        from api.services.editor import editor
+
         # Group quotes by book
         for quote in quotes:
             book_id = quote['book_id']
 
             if book_id not in book_results:
                 book_metadata = books_lookup.get(book_id, {})
+                # Apply edits overlay to book metadata
+                book_with_edits = editor.apply_edits('book', book_id, book_metadata)
                 book_results[book_id] = {
-                    "book": book_metadata,
+                    "book": book_with_edits,
                     "hits_count": 0,
                     "top_quotes": [],
                     "total_book_quotes": book_metadata.get('total_quotes', 0)
@@ -305,11 +338,13 @@ class QuoteScorer:
 
             # Keep only top 5 quotes per book
             if len(book_results[book_id]["top_quotes"]) < 5:
+                # Apply edits overlay to quote
+                quote_with_edits = editor.apply_edits('quote', quote['id'], quote)
                 quote_response = {
-                    "id": quote['id'],
-                    "quote_text": quote['quote_text'],
-                    "page": quote['page'],
-                    "keywords": quote['keywords'],
+                    "id": quote_with_edits['id'],
+                    "quote_text": quote_with_edits['quote_text'],
+                    "page": quote_with_edits.get('page'),
+                    "keywords": quote_with_edits.get('keywords'),
                     "score": round(quote['score'], 2)
                 }
                 book_results[book_id]["top_quotes"].append(quote_response)
@@ -343,14 +378,19 @@ class QuoteScorer:
         book_rows = cursor.fetchall()
         books_lookup = {row['id']: dict(row) for row in book_rows}
 
+        # Import editor locally to avoid circular dependency
+        from api.services.editor import editor
+
         # Group quotes by book
         for quote in quotes:
             book_id = quote['book_id']
 
             if book_id not in book_results:
                 book_metadata = books_lookup.get(book_id, {})
+                # Apply edits overlay to book metadata
+                book_with_edits = editor.apply_edits('book', book_id, book_metadata)
                 book_results[book_id] = {
-                    "book": book_metadata,
+                    "book": book_with_edits,
                     "hits_count": 0,
                     "top_quotes": [],
                     "total_book_quotes": book_metadata.get('total_quotes', 0)
@@ -360,14 +400,17 @@ class QuoteScorer:
 
             # Keep only top 5 quotes per book
             if len(book_results[book_id]["top_quotes"]) < 5:
+                # Apply edits overlay to quote
+                quote_with_edits = editor.apply_edits('quote', quote['id'], quote)
+
                 breakdown = quote['score_breakdown']
                 breakdown.final_score = quote['score']
 
                 quote_response = {
-                    "id": quote['id'],
-                    "quote_text": quote['quote_text'],
-                    "page": quote['page'],
-                    "keywords": quote['quote_keywords'],
+                    "id": quote_with_edits['id'],
+                    "quote_text": quote_with_edits['quote_text'],
+                    "page": quote_with_edits.get('page'),
+                    "keywords": quote_with_edits.get('quote_keywords') or quote_with_edits.get('keywords'),
                     "score": round(breakdown.final_score, 2),
                     "score_breakdown": breakdown
                 }

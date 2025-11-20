@@ -9,6 +9,7 @@ from typing import List, Optional
 import os
 
 from api.services.scorer import scorer
+from api.services.editor import editor
 
 router = APIRouter()
 
@@ -85,17 +86,20 @@ async def get_book_quotes(
         paginated_quotes = all_quotes[offset:offset + limit]
         has_more = (offset + limit) < total_count
 
-        # Format response
-        quotes = [
-            Quote(
-                id=row['id'],
-                page=row['page'],
-                section=row['section'] if 'section' in row.keys() else None,
-                quote_text=row['quote_text'],
-                keywords=row['keywords']
-            )
-            for row in paginated_quotes
-        ]
+        # Format response with edits applied
+        quotes = []
+        for row in paginated_quotes:
+            # Apply edits overlay
+            quote_data = dict(row)
+            quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
+
+            quotes.append(Quote(
+                id=quote_with_edits['id'],
+                page=quote_with_edits.get('page'),
+                section=quote_with_edits.get('section'),
+                quote_text=quote_with_edits['quote_text'],
+                keywords=quote_with_edits.get('keywords')
+            ))
 
         conn.close()
 
@@ -136,25 +140,28 @@ async def get_book_citation(
         FROM books WHERE id = ?
         """, (book_id,))
 
-        book = cursor.fetchone()
+        book_row = cursor.fetchone()
         conn.close()
 
-        if not book:
+        if not book_row:
             raise HTTPException(status_code=404, detail="Book not found")
+
+        # Apply edits overlay
+        book = editor.apply_edits('book', book_id, dict(book_row))
 
         # Generate basic citation
         parts = []
-        if book['authors']:
+        if book.get('authors'):
             parts.append(book['authors'])
-        if book['title']:
+        if book.get('title'):
             parts.append(f'"{book["title"]}"')
-        if book['container']:
+        if book.get('container'):
             parts.append(f"<i>{book['container']}</i>")
-        elif book['publisher']:
+        elif book.get('publisher'):
             parts.append(book['publisher'])
-        if book['year']:
+        if book.get('year'):
             parts.append(str(book['year']))
-        if book['doi']:
+        if book.get('doi'):
             parts.append(f"DOI: {book['doi']}")
 
         citation = ". ".join(parts) + "." if parts else "Citation unavailable"

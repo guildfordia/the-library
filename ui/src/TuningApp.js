@@ -129,6 +129,42 @@ const TuningApp = () => {
     setMessage('Tuning configuration exported successfully');
   };
 
+  const importTuning = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const tuningData = JSON.parse(text);
+
+        // Validate the tuning data structure
+        if (!tuningData.config || !tuningData.config.field_weights) {
+          throw new Error('Invalid tuning file format');
+        }
+
+        // Apply the tuning configuration
+        await fetch(`${API_URL}/tuning/config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tuningData.config)
+        });
+
+        setConfig(tuningData.config);
+        setMessage('Tuning configuration imported successfully');
+        setTimeout(() => setMessage(''), 3000);
+      } catch (error) {
+        console.error('Import error:', error);
+        setMessage('Import failed: ' + error.message);
+        setTimeout(() => setMessage(''), 3000);
+      }
+    };
+    input.click();
+  };
+
   const resetToDefaults = async () => {
     if (!window.confirm('Reset all tuning parameters to default values? This cannot be undone.')) {
       return;
@@ -348,11 +384,25 @@ const TuningApp = () => {
 
           {/* Right Column: Export and Actions */}
           <div className="space-y-6">
+            {/* Import */}
+            <div className="border border-gray-200 rounded p-4">
+              <h2 className="font-bold mb-4">Import Tuning</h2>
+              <p className="text-sm text-gray-600 mb-4">
+                Import a previously exported tuning configuration JSON file.
+              </p>
+              <button
+                onClick={importTuning}
+                className="px-4 py-2 text-sm border border-gray-200 rounded hover:bg-gray-50 bg-green-50 border-green-200 text-green-700"
+              >
+                Import Configuration
+              </button>
+            </div>
+
             {/* Export */}
             <div className="border border-gray-200 rounded p-4">
               <h2 className="font-bold mb-4">Export Tuning</h2>
               <p className="text-sm text-gray-600 mb-4">
-                Export your current tuning configuration as a JSON file that can be imported on the main search page.
+                Export your current tuning configuration as a JSON file for backup or sharing.
               </p>
               <button
                 onClick={exportTuning}

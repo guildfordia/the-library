@@ -95,8 +95,8 @@ const ReloadApp = () => {
       <div className="mb-8 pb-6 border-b-2 border-black">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
           <div>
-            <h1 className="text-2xl font-bold mb-2">DATA RELOAD CENTER</h1>
-            <p className="text-gray-600 italic">Load new CSV and JSON data into the search system</p>
+            <h1 className="text-2xl font-bold mb-2">DATA MANAGEMENT</h1>
+            <p className="text-gray-600 italic">Import and export your bibliography and quotes data</p>
             <p className="text-xs text-red-600 font-mono mt-1">API: {API_URL}</p>
           </div>
 
@@ -155,9 +155,33 @@ const ReloadApp = () => {
         </div>
       )}
 
+      {/* Export Data Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Export Database</h2>
+        <div className="bg-blue-50 border border-blue-300 rounded p-4">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="text-blue-600 font-bold">💾</span>
+            <div className="text-sm text-blue-800 flex-1">
+              <div className="font-semibold mb-1">Export Your Complete Database</div>
+              <p>Download all books and quotes (with edits applied) as a ZIP file containing CSV and JSON files. This export can be used as a backup or to import into another instance.</p>
+            </div>
+          </div>
+          <a
+            href="/api/admin/export"
+            download
+            className="inline-block px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-bold"
+          >
+            Export Database (ZIP)
+          </a>
+          <p className="text-xs text-gray-600 mt-2">
+            Includes: data/biblio/FINAL_BIBLIO_ATLANTA.csv + data/extracts/*.json
+          </p>
+        </div>
+      </div>
+
       {/* Load New Data Form */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Load New Data</h2>
+        <h2 className="text-xl font-bold mb-4">Import New Data</h2>
 
         <div className="bg-yellow-50 border border-yellow-300 rounded p-4 mb-6">
           <div className="flex items-start gap-3">

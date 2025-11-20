@@ -69,12 +69,15 @@ def create_tables(conn: sqlite3.Connection):
     """)
 
     # FTS5 virtual table for full-text search
+    # Note: We don't use content='quotes' anymore since we need to join with books table
     conn.execute("""
     CREATE VIRTUAL TABLE IF NOT EXISTS quotes_fts USING fts5(
         quote_text,
-        keywords,
-        content='quotes',
-        content_rowid='id'
+        quote_keywords,
+        book_title,
+        book_authors,
+        book_keywords,
+        book_summary
     )
     """)
 
@@ -265,31 +268,38 @@ def load_quotes(conn: sqlite3.Connection, extracts_dir: str, book_mapping: Dict[
         print(f"Warning: {len(unknown_books)} files had no bibliography match and were created as placeholder books")
 
 def rebuild_fts_index(conn: sqlite3.Connection):
-    """Rebuild FTS5 virtual table from quotes table"""
+    """Rebuild FTS5 virtual table from quotes table with book metadata"""
 
-    try:
-        # Clear existing FTS data
-        conn.execute("DELETE FROM quotes_fts")
-    except sqlite3.DatabaseError:
-        # If FTS table is corrupted, recreate it
-        conn.execute("DROP TABLE IF EXISTS quotes_fts")
-        conn.execute("""
-        CREATE VIRTUAL TABLE quotes_fts USING fts5(
-            quote_text,
-            keywords,
-            content='quotes',
-            content_rowid='id'
-        )
-        """)
-
-    # Rebuild from quotes table
+    # Always drop and recreate to ensure correct schema
+    conn.execute("DROP TABLE IF EXISTS quotes_fts")
     conn.execute("""
-    INSERT INTO quotes_fts(rowid, quote_text, keywords)
-    SELECT id, quote_text, COALESCE(keywords, '') FROM quotes
+    CREATE VIRTUAL TABLE quotes_fts USING fts5(
+        quote_text,
+        quote_keywords,
+        book_title,
+        book_authors,
+        book_keywords,
+        book_summary
+    )
+    """)
+
+    # Rebuild from quotes table with book metadata joined in
+    conn.execute("""
+    INSERT INTO quotes_fts(rowid, quote_text, quote_keywords, book_title, book_authors, book_keywords, book_summary)
+    SELECT
+        q.id,
+        q.quote_text,
+        COALESCE(q.keywords, ''),
+        COALESCE(b.title, ''),
+        COALESCE(b.authors, ''),
+        COALESCE(b.doc_keywords, ''),
+        COALESCE(b.doc_summary, '')
+    FROM quotes q
+    LEFT JOIN books b ON q.book_id = b.id
     """)
 
     conn.commit()
-    print("Rebuilt FTS5 index")
+    print("Rebuilt FTS5 index with book metadata")
 
 def main():
     parser = argparse.ArgumentParser(description="Build SQLite + FTS5 index for The Library")

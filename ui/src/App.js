@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './index.css';
+import EditableField from './EditableField';
 
 const API_URL = process.env.REACT_APP_API_URL || '/api';
 
@@ -80,59 +81,136 @@ const SearchBar = ({ query, setQuery, onSearch, loading }) => {
   );
 };
 
-const DetailsPanel = ({ book, onCopyCitation, query }) => (
-  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-    <h4 className="font-bold mb-3">Book Details</h4>
-    <div className="space-y-2 text-sm">
-      <div>
-        <span className="font-semibold text-gray-600">Author:</span> {highlightSearchTerms((book.authors || "Unknown author").replace(/;/g, ', '), query)}
+const DetailsPanel = ({ book, onCopyCitation, query }) => {
+  const [bookData, setBookData] = useState(book);
+
+  const handleFieldSave = (fieldName, newValue) => {
+    setBookData(prev => ({
+      ...prev,
+      [fieldName]: newValue
+    }));
+  };
+
+  return (
+    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+      <h4 className="font-bold mb-3">Book Details <span className="text-xs font-normal text-gray-500">(click to edit)</span></h4>
+      <div className="space-y-3 text-sm">
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Title:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="title"
+            value={bookData.title}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Author(s):</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="authors"
+            value={bookData.authors}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Theme:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="container"
+            value={bookData.themes || bookData.container}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Type:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="entry_type"
+            value={bookData.type || bookData.entry_type}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Year:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="year"
+            value={bookData.year?.toString()}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Publisher:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="publisher"
+            value={bookData.publisher}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">DOI:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="doi"
+            value={bookData.doi}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">ISBN:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="issn"
+            value={bookData.isbn || bookData.issn}
+            onSave={handleFieldSave}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Summary:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="doc_summary"
+            value={bookData.summary || bookData.doc_summary}
+            onSave={handleFieldSave}
+            multiline={true}
+          />
+        </div>
+        <div>
+          <span className="font-semibold text-gray-600 block mb-1">Keywords:</span>
+          <EditableField
+            entityType="book"
+            entityId={bookData.id}
+            fieldName="doc_keywords"
+            value={bookData.keywords || bookData.doc_keywords}
+            onSave={handleFieldSave}
+          />
+        </div>
       </div>
-      <div>
-        <span className="font-semibold text-gray-600">Title:</span> {highlightSearchTerms(book.title || "Unknown title", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Edition:</span> {highlightSearchTerms(book.publisher || "Unknown edition", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">City:</span> Unknown city
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Publisher:</span> {highlightSearchTerms(book.publisher || "Unknown publisher", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Date:</span> {highlightSearchTerms(book.year?.toString() || "Unknown date", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">ISBN:</span> {highlightSearchTerms(book.isbn || "Unknown ISBN", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Summary:</span>
-        <div className="text-gray-800 mt-1">{highlightSearchTerms(book.summary || "Unknown summary", query)}</div>
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Keywords:</span> {highlightSearchTerms(book.keywords || "No keywords", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Journal:</span> {highlightSearchTerms(book.journal || "N/A", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">DOI:</span> {highlightSearchTerms(book.doi || "N/A", query)}
-      </div>
-      <div>
-        <span className="font-semibold text-gray-600">Total quotes in database:</span> {book.total_quotes || "Unknown"}
+      <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
+        <div className="text-xs text-gray-500">
+          ✎ Click any field above to edit
+        </div>
+        <button
+          onClick={() => onCopyCitation(bookData)}
+          className="text-sm text-gray-600 hover:text-black underline transition-colors"
+        >
+          [copy citation]
+        </button>
       </div>
     </div>
-    <div className="flex justify-between items-center mt-3">
-      <div></div>
-      <button
-        onClick={() => onCopyCitation(book)}
-        className="text-sm text-gray-600 hover:text-black underline transition-colors"
-      >
-        [copy citation]
-      </button>
-    </div>
-  </div>
-);
+  );
+};
 
 const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
   const [quotes, setQuotes] = useState([]);
@@ -195,30 +273,57 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
         <SpinnerAscii />
       ) : (
         <div className="space-y-4">
-          {quotes.map((quote, idx) => (
-            <div key={quote.id} className="border-b border-gray-200 pb-3 last:border-b-0">
-              <blockquote className="text-gray-800 mb-2">
-                <span className="text-2xl text-gray-300 mr-1">"</span>
-                <span className="italic">{highlightSearchTerms(quote.quote_text, query)}</span>
-                <span className="text-2xl text-gray-300 ml-1">"</span>
-              </blockquote>
-              <div className="flex justify-between items-center">
-                {(quote.page || quote.section) && (
-                  <div className="text-sm text-gray-500">
-                    {quote.page && <span className="font-semibold">p. {quote.page}</span>}
-                    {quote.page && quote.section && ' • '}
-                    {quote.section && quote.section}
+          {quotes.map((quote, idx) => {
+            const handleQuoteFieldSave = (fieldName, newValue) => {
+              // Update in quotes array
+              setQuotes(prevQuotes =>
+                prevQuotes.map(q => q.id === quote.id ? {...q, [fieldName]: newValue} : q)
+              );
+            };
+
+            return (
+              <div key={quote.id} className="border-b border-gray-200 pb-3 last:border-b-0">
+                <div className="mb-2">
+                  <span className="text-2xl text-gray-300 mr-1">"</span>
+                  <EditableField
+                    entityType="quote"
+                    entityId={quote.id}
+                    fieldName="quote_text"
+                    value={quote.quote_text}
+                    onSave={handleQuoteFieldSave}
+                    multiline={true}
+                    className="inline italic text-gray-800"
+                  />
+                  <span className="text-2xl text-gray-300 ml-1">"</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-500 flex gap-2 items-center">
+                    <span>Page:</span>
+                    <EditableField
+                      entityType="quote"
+                      entityId={quote.id}
+                      fieldName="page"
+                      value={quote.page?.toString()}
+                      onSave={handleQuoteFieldSave}
+                      className="font-semibold"
+                    />
+                    {quote.section && (
+                      <>
+                        <span>•</span>
+                        <span>{quote.section}</span>
+                      </>
+                    )}
                   </div>
-                )}
-                <button
-                  onClick={() => onCopy(quote)}
-                  className="text-sm text-gray-600 hover:text-black underline transition-colors"
-                >
-                  [copy]
-                </button>
+                  <button
+                    onClick={() => onCopy(quote)}
+                    className="text-sm text-gray-600 hover:text-black underline transition-colors"
+                  >
+                    [copy]
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {hasMore && (
             <div className="text-center pt-2">
@@ -855,42 +960,6 @@ function App() {
     }
   };
 
-  const handleImportTuning = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      try {
-        const text = await file.text();
-        const tuningData = JSON.parse(text);
-
-        // Validate the tuning data structure
-        if (!tuningData.config || !tuningData.config.field_weights) {
-          throw new Error('Invalid tuning file format');
-        }
-
-        // Apply the tuning configuration
-        await fetch(`${API_URL}/tuning/config`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(tuningData.config)
-        });
-
-        setToast({ message: '[tuning imported]', visible: true });
-        setTimeout(() => setToast({ message: '', visible: false }), 2000);
-      } catch (error) {
-        console.error('Import error:', error);
-        setToast({ message: '[import failed]', visible: true });
-        setTimeout(() => setToast({ message: '', visible: false }), 2000);
-      }
-    };
-    input.click();
-  };
-
-
   return (
     <div className="min-h-screen bg-white text-black  p-4 max-w-6xl mx-auto">
       {/* Header */}
@@ -922,17 +991,11 @@ function App() {
                 >
                   Tuning
                 </a>
-                <button
-                  onClick={handleImportTuning}
-                  className="text-sm px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                >
-                  Import
-                </button>
                 <a
-                  href="/reload"
+                  href="/data"
                   className="text-sm px-3 py-1 border border-purple-300 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition-colors"
                 >
-                  Reload Data
+                  Data Management
                 </a>
               </div>
             )}

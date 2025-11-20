@@ -42,16 +42,31 @@ class QueryParser:
         return matches[0] if matches else None
 
     def _convert_to_fts(self, query: str) -> str:
-        """Convert user query to FTS5 MATCH syntax."""
+        """Convert user query to FTS5 MATCH syntax.
+
+        For multi-field FTS tables, we want a document to match if it contains ANY of the terms,
+        with BM25 scoring giving higher ranks to documents with more term matches.
+        We convert space-separated terms to OR queries unless explicit operators are present.
+        """
         fts_query = query
 
-        # Normalize boolean operators to uppercase
+        # Clean up extra whitespace first
+        fts_query = re.sub(r'\s+', ' ', fts_query).strip()
+
+        # Check if query already has boolean operators
+        has_operators = re.search(r'\b(AND|OR|NOT)\b', fts_query, re.IGNORECASE)
+
+        if not has_operators:
+            # No operators: convert space-separated terms to OR
+            # This allows matching if ANY term appears, with BM25 ranking documents with more matches higher
+            terms = fts_query.split()
+            if len(terms) > 1:
+                fts_query = ' OR '.join(terms)
+
+        # Normalize boolean operators to uppercase (if any)
         fts_query = re.sub(r'\band\b', 'AND', fts_query, flags=re.IGNORECASE)
         fts_query = re.sub(r'\bor\b', 'OR', fts_query, flags=re.IGNORECASE)
         fts_query = re.sub(r'\bnot\b', 'NOT', fts_query, flags=re.IGNORECASE)
-
-        # Clean up extra whitespace
-        fts_query = re.sub(r'\s+', ' ', fts_query).strip()
 
         # Ensure we have valid content to search
         if not fts_query or fts_query in ['AND', 'OR', 'NOT']:
