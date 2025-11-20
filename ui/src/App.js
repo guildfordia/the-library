@@ -557,6 +557,7 @@ const BookCard = ({
   }, [book]);
 
   const handleBookUpdate = (fieldName, newValue) => {
+    console.log('handleBookUpdate called:', fieldName, newValue);
     setBookData(prev => {
       const updated = { ...prev };
       updated[fieldName] = newValue;
@@ -578,6 +579,7 @@ const BookCard = ({
         updated.themes = newValue;
       }
 
+      console.log('Updated bookData:', updated);
       return updated;
     });
   };
