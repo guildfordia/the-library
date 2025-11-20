@@ -85,10 +85,31 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
   const [bookData, setBookData] = useState(book);
 
   const handleFieldSave = (fieldName, newValue) => {
-    setBookData(prev => ({
-      ...prev,
-      [fieldName]: newValue
-    }));
+    setBookData(prev => {
+      const updated = { ...prev };
+
+      // Update the field that was edited
+      updated[fieldName] = newValue;
+
+      // Also update display field mappings
+      if (fieldName === 'entry_type') {
+        updated.type = newValue;
+      }
+      if (fieldName === 'doc_keywords') {
+        updated.keywords = newValue;
+      }
+      if (fieldName === 'doc_summary') {
+        updated.summary = newValue;
+      }
+      if (fieldName === 'issn') {
+        updated.isbn = newValue;
+      }
+      if (fieldName === 'container') {
+        updated.themes = newValue;
+      }
+
+      return updated;
+    });
   };
 
   return (
