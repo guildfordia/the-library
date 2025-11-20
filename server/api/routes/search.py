@@ -10,6 +10,7 @@ import os
 
 from api.services.parser import parser
 from api.services.scorer import scorer
+from api.services.editor import editor
 from api.models.scoring_config import tuning_manager
 
 router = APIRouter()
@@ -110,35 +111,42 @@ async def search_quotes(
         search_results = []
         for item in results["results"]:
             book_data = item["book"]
+
+            # Apply edits to book data
+            book_with_edits = editor.apply_edits('book', book_data.get("id", 0), book_data)
+
             book_result = BookResult(
-                id=book_data.get("id", 0),
-                title=book_data.get("title", ""),
-                authors=book_data.get("authors"),
-                year=book_data.get("year"),
-                publisher=book_data.get("publisher"),
-                journal=book_data.get("container"),  # Map container -> journal
-                doi=book_data.get("doi"),
-                isbn=book_data.get("issn"),  # Map issn -> isbn
-                type=book_data.get("entry_type"),  # Map entry_type -> type (article, book, etc.)
-                themes=book_data.get("container"),  # Map container -> themes (publication/journal as theme)
-                keywords=book_data.get("doc_keywords"),  # Map doc_keywords -> keywords
-                summary=book_data.get("doc_summary"),  # Map doc_summary -> summary
+                id=book_with_edits.get("id", 0),
+                title=book_with_edits.get("title", ""),
+                authors=book_with_edits.get("authors"),
+                year=book_with_edits.get("year"),
+                publisher=book_with_edits.get("publisher"),
+                journal=book_with_edits.get("container"),  # Map container -> journal
+                doi=book_with_edits.get("doi"),
+                isbn=book_with_edits.get("issn"),  # Map issn -> isbn
+                type=book_with_edits.get("entry_type"),  # Map entry_type -> type (article, book, etc.)
+                themes=book_with_edits.get("container"),  # Map container -> themes (publication/journal as theme)
+                keywords=book_with_edits.get("doc_keywords"),  # Map doc_keywords -> keywords
+                summary=book_with_edits.get("doc_summary"),  # Map doc_summary -> summary
                 iso690=None  # Not implemented yet
             )
 
             quote_results = []
             for quote in item["top_quotes"]:
+                # Apply edits to quote data
+                quote_with_edits = editor.apply_edits('quote', quote["id"], quote)
+
                 # Convert ScoringBreakdown object to dict if present
-                score_breakdown = quote.get("score_breakdown")
+                score_breakdown = quote_with_edits.get("score_breakdown")
                 if score_breakdown and hasattr(score_breakdown, 'dict'):
                     score_breakdown = score_breakdown.dict()
 
                 quote_results.append(QuoteResult(
-                    id=quote["id"],
-                    quote_text=quote["quote_text"],
-                    page=quote["page"],
-                    keywords=quote["keywords"],
-                    score=quote["score"],
+                    id=quote_with_edits["id"],
+                    quote_text=quote_with_edits["quote_text"],
+                    page=quote_with_edits["page"],
+                    keywords=quote_with_edits["keywords"],
+                    score=quote_with_edits["score"],
                     score_breakdown=score_breakdown
                 ))
 
