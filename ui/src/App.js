@@ -81,36 +81,9 @@ const SearchBar = ({ query, setQuery, onSearch, loading }) => {
   );
 };
 
-const DetailsPanel = ({ book, onCopyCitation, query }) => {
-  const [bookData, setBookData] = useState(book);
-
-  const handleFieldSave = (fieldName, newValue) => {
-    setBookData(prev => {
-      const updated = { ...prev };
-
-      // Update the field that was edited
-      updated[fieldName] = newValue;
-
-      // Also update display field mappings
-      if (fieldName === 'entry_type') {
-        updated.type = newValue;
-      }
-      if (fieldName === 'doc_keywords') {
-        updated.keywords = newValue;
-      }
-      if (fieldName === 'doc_summary') {
-        updated.summary = newValue;
-      }
-      if (fieldName === 'issn') {
-        updated.isbn = newValue;
-      }
-      if (fieldName === 'container') {
-        updated.themes = newValue;
-      }
-
-      return updated;
-    });
-  };
+const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
+  // Use book data directly from parent (BookCard manages state)
+  const bookData = book;
 
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -123,7 +96,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="title"
             value={bookData.title}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -133,7 +106,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="authors"
             value={bookData.authors}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -143,7 +116,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="container"
             value={bookData.themes || bookData.container}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -153,7 +126,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="entry_type"
             value={bookData.type || bookData.entry_type}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -163,7 +136,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="year"
             value={bookData.year?.toString()}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -173,7 +146,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="publisher"
             value={bookData.publisher}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -183,7 +156,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="doi"
             value={bookData.doi}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -193,7 +166,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="issn"
             value={bookData.isbn || bookData.issn}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
         <div>
@@ -203,7 +176,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="doc_summary"
             value={bookData.summary || bookData.doc_summary}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
             multiline={true}
           />
         </div>
@@ -214,7 +187,7 @@ const DetailsPanel = ({ book, onCopyCitation, query }) => {
             entityId={bookData.id}
             fieldName="doc_keywords"
             value={bookData.keywords || bookData.doc_keywords}
-            onSave={handleFieldSave}
+            onSave={onFieldSave}
           />
         </div>
       </div>
@@ -576,6 +549,38 @@ const BookCard = ({
   const isExpanded = expandedBookId === book.id;
   const [totalQuoteCount, setTotalQuoteCount] = useState(null);
   const [relevantQuoteCount, setRelevantQuoteCount] = useState(hitsCount);
+  const [bookData, setBookData] = useState(book);
+
+  // Update bookData when book prop changes (e.g., from search results)
+  useEffect(() => {
+    setBookData(book);
+  }, [book]);
+
+  const handleBookUpdate = (fieldName, newValue) => {
+    setBookData(prev => {
+      const updated = { ...prev };
+      updated[fieldName] = newValue;
+
+      // Also update display field mappings
+      if (fieldName === 'entry_type') {
+        updated.type = newValue;
+      }
+      if (fieldName === 'doc_keywords') {
+        updated.keywords = newValue;
+      }
+      if (fieldName === 'doc_summary') {
+        updated.summary = newValue;
+      }
+      if (fieldName === 'issn') {
+        updated.isbn = newValue;
+      }
+      if (fieldName === 'container') {
+        updated.themes = newValue;
+      }
+
+      return updated;
+    });
+  };
 
   // Fetch total quote count for this book
   useEffect(() => {
@@ -607,14 +612,14 @@ const BookCard = ({
       {/* Header */}
       <div className="mb-3">
         <h3 className="font-bold text-lg underline decoration-gray-300 underline-offset-2">
-          {book.title || 'Unknown title'}
+          {bookData.title || 'Unknown title'}
         </h3>
         <p className="text-gray-700">
-          {(book.authors || 'Unknown author').replace(/;/g, ',')}
+          {(bookData.authors || 'Unknown author').replace(/;/g, ',')}
         </p>
         <div className="text-sm text-gray-600 mt-1">
           <div>
-            {book.themes || 'Unknown theme'} — {book.type || 'Unknown type'} — {book.year || 'Unknown date'}
+            {bookData.themes || 'Unknown theme'} — {bookData.type || 'Unknown type'} — {bookData.year || 'Unknown date'}
           </div>
         </div>
       </div>
@@ -625,21 +630,21 @@ const BookCard = ({
         <button
           onClick={() => handlePanelToggle('details')}
           className="text-xs px-3 py-1 border border-gray-200 rounded-2xl hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 transition-colors"
-          aria-label={`Show details for ${book.title}`}
+          aria-label={`Show details for ${bookData.title}`}
         >
           Details
         </button>
         <button
           onClick={() => handlePanelToggle('relevant')}
           className="text-xs px-3 py-1 border border-gray-200 rounded-2xl hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 transition-colors"
-          aria-label={`Show relevant quotes for ${book.title}`}
+          aria-label={`Show relevant quotes for ${bookData.title}`}
         >
           Relevant quotes ({relevantQuoteCount})
         </button>
         <button
           onClick={() => handlePanelToggle('all')}
           className="text-xs px-3 py-1 border border-gray-200 rounded-2xl hover:bg-gray-50 focus:ring-2 focus:ring-gray-300 transition-colors"
-          aria-label={`Show all quotes for ${book.title}`}
+          aria-label={`Show all quotes for ${bookData.title}`}
         >
           All quotes {totalQuoteCount !== null ? `(${totalQuoteCount})` : '(loading...)'}
         </button>
@@ -647,7 +652,7 @@ const BookCard = ({
           <button
             onClick={() => handlePanelToggle('score')}
             className="text-xs px-3 py-1 bg-black text-white rounded-2xl hover:bg-gray-800 focus:ring-2 focus:ring-gray-300 transition-colors"
-            aria-label={`Show score breakdown for ${book.title}`}
+            aria-label={`Show score breakdown for ${bookData.title}`}
           >
             Score
           </button>
@@ -656,7 +661,7 @@ const BookCard = ({
 
       {/* Expanded panels */}
       {isExpanded && expandedPanel === 'details' && (
-        <DetailsPanel book={book} onCopyCitation={onCopyCitation} query={query} />
+        <DetailsPanel book={bookData} onCopyCitation={onCopyCitation} onFieldSave={handleBookUpdate} query={query} />
       )}
 
       {isExpanded && expandedPanel === 'relevant' && (
