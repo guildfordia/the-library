@@ -63,8 +63,13 @@ export const EditableField = ({
       const result = await response.json();
 
       // Notify parent component
+      console.log('EditableField: About to call onSave', { fieldName, editValue, onSave: !!onSave });
       if (onSave) {
+        console.log('EditableField: Calling onSave now');
         onSave(fieldName, editValue, result);
+        console.log('EditableField: onSave called successfully');
+      } else {
+        console.log('EditableField: No onSave callback provided!');
       }
 
       setIsEditing(false);
