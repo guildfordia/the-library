@@ -797,14 +797,11 @@ function App() {
   const [clickSequence, setClickSequence] = useState([]);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Expert mode activation: Click on title 5 times within 3 seconds
+  // Expert mode activation: Click on title 5 times within 1.5 seconds
   const handleTitleClick = () => {
     const now = Date.now();
-    const newSequence = [...clickSequence, now].filter(timestamp => now - timestamp < 3000);
+    const newSequence = [...clickSequence, now].filter(timestamp => now - timestamp < 1500);
     setClickSequence(newSequence);
-
-    // Debug log
-    console.log('Title clicked, sequence length:', newSequence.length);
 
     if (newSequence.length >= 5) {
       setExpertMode(!expertMode);
@@ -997,12 +994,9 @@ function App() {
             <h1
               className="text-2xl font-bold mb-2 cursor-pointer select-none hover:text-gray-700 transition-colors"
               onClick={handleTitleClick}
-              title={`Click 5 times quickly to toggle expert mode (${clickSequence.length}/5)`}
               style={{ userSelect: 'none' }}
             >
-              THE LIBRARY {clickSequence.length > 0 && clickSequence.length < 5 && (
-                <span className="text-xs text-gray-400">({clickSequence.length}/5)</span>
-              )}
+              THE LIBRARY
             </h1>
             <p className="text-gray-600 italic">A Retcon Black Mountain Tool</p>
             {expertMode && <p className="text-xs text-red-600 ">API: {API_URL} - UPDATED</p>}
