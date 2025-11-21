@@ -248,7 +248,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query, expertMode = f
   );
 };
 
-const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
+const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate, expertMode = false }) => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -335,6 +335,7 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
                     onSave={handleQuoteFieldSave}
                     multiline={true}
                     className="inline italic text-gray-800"
+                    disabled={!expertMode}
                   />
                   <span className="text-2xl text-gray-300 ml-1">"</span>
                 </div>
@@ -348,6 +349,7 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
                       value={quote.page?.toString()}
                       onSave={handleQuoteFieldSave}
                       className="font-semibold"
+                      disabled={!expertMode}
                     />
                     {quote.section && (
                       <>
@@ -723,6 +725,7 @@ const BookCard = ({
           query={query}
           onCopy={(quote) => onCopy(quote, book)}
           onCountUpdate={setRelevantQuoteCount}
+          expertMode={expertMode}
         />
       )}
 
@@ -732,6 +735,7 @@ const BookCard = ({
           relevant={false}
           query={query}
           onCopy={(quote) => onCopy(quote, book)}
+          expertMode={expertMode}
         />
       )}
 
