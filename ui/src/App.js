@@ -270,14 +270,17 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
       const response = await fetch(`${API_URL}/books/${bookId}/quotes?${params}`);
       const data = await response.json();
 
+      // Safety check: ensure quotes is always an array
+      const quotesArray = Array.isArray(data.quotes) ? data.quotes : [];
+
       if (newOffset === 0) {
-        setQuotes(data.quotes);
+        setQuotes(quotesArray);
       } else {
-        setQuotes(prev => [...prev, ...data.quotes]);
+        setQuotes(prev => [...prev, ...quotesArray]);
       }
 
-      setHasMore(data.has_more);
-      setTotalCount(data.total_count);
+      setHasMore(data.has_more || false);
+      setTotalCount(data.total_count || 0);
       setOffset(newOffset);
 
       // Update parent component with accurate count
@@ -312,7 +315,7 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
         </div>
       ) : (
         <div className="space-y-4">
-          {quotes.map((quote, idx) => {
+          {Array.isArray(quotes) && quotes.map((quote, idx) => {
             const handleQuoteFieldSave = (fieldName, newValue) => {
               // Update in quotes array
               setQuotes(prevQuotes =>
