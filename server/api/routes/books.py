@@ -88,12 +88,14 @@ async def get_book_quotes(
             # Format response
             quotes = []
             for row in paginated_quotes:
+                # Convert Row to dict to use .get()
+                row_dict = dict(row)
                 quotes.append(Quote(
-                    id=row['id'],
-                    page=row['page'],
-                    section=row.get('section'),
-                    quote_text=row['quote_text'],
-                    keywords=row.get('keywords')
+                    id=row_dict['id'],
+                    page=row_dict.get('page'),
+                    section=row_dict.get('section'),
+                    quote_text=row_dict['quote_text'],
+                    keywords=row_dict.get('keywords')
                 ))
 
             return BookQuotesResponse(
