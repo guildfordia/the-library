@@ -1,17 +1,16 @@
 """
 Edit service for The Library.
-Handles overlay edits without modifying source CSV/JSON files.
+Handles direct database updates for book and quote metadata.
 """
 
 import sqlite3
 from typing import Dict, Any, List, Optional
-from datetime import datetime
 
 
 class EditorService:
     """
-    Service for managing edits with overlay approach.
-    Edits are stored in separate table and merged on read.
+    Service for managing direct database edits.
+    Updates are written directly to books/quotes tables.
     """
 
     # Whitelist of allowed fields to prevent SQL injection
@@ -33,44 +32,6 @@ class EditorService:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def apply_edits(self, entity_type: str, entity_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Apply edits to entity by merging base data with active edits.
-        This is the core overlay function used by search/get endpoints.
-        """
-        conn = self._get_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Get active edits for this entity
-            cursor.execute("""
-                SELECT field_name, new_value
-                FROM edits
-                WHERE entity_type = ? AND entity_id = ? AND status = 'active'
-            """, (entity_type, entity_id))
-
-            edits = cursor.fetchall()
-
-            # Apply edits as overlay
-            result = dict(data)
-            for edit in edits:
-                field_name = edit['field_name']
-                new_value = edit['new_value']
-
-                # Convert string to appropriate type based on field
-                if field_name in ['year', 'page']:
-                    try:
-                        result[field_name] = int(new_value) if new_value else None
-                    except (ValueError, TypeError):
-                        result[field_name] = new_value
-                else:
-                    result[field_name] = new_value
-
-            return result
-
-        finally:
-            conn.close()
-
     def save_edit(
         self,
         entity_type: str,
@@ -80,90 +41,48 @@ class EditorService:
         edited_by: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Save an edit to the edits table.
-        Uses REPLACE to handle updates to existing edits.
+        Save an edit by updating the database directly.
         """
         # Validate entity_type and field_name to prevent SQL injection
         if entity_type == 'book':
             if field_name not in self.ALLOWED_BOOK_FIELDS:
                 raise ValueError(f"Invalid field '{field_name}' for book edits. Allowed fields: {', '.join(self.ALLOWED_BOOK_FIELDS)}")
+            table_name = 'books'
         elif entity_type == 'quote':
             if field_name not in self.ALLOWED_QUOTE_FIELDS:
                 raise ValueError(f"Invalid field '{field_name}' for quote edits. Allowed fields: {', '.join(self.ALLOWED_QUOTE_FIELDS)}")
+            table_name = 'quotes'
         else:
             raise ValueError(f"Invalid entity_type: {entity_type}. Must be 'book' or 'quote'")
 
-        conn = self._get_connection()
-        cursor = conn.cursor()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-        try:
-            # Get current value from base table (field_name now validated above)
-            if entity_type == 'book':
-                cursor.execute(f"SELECT {field_name} FROM books WHERE id = ?", (entity_id,))
-            elif entity_type == 'quote':
-                cursor.execute(f"SELECT {field_name} FROM quotes WHERE id = ?", (entity_id,))
-
+            # Get current value
+            cursor.execute(f"SELECT {field_name} FROM {table_name} WHERE id = ?", (entity_id,))
             row = cursor.fetchone()
             if not row:
                 raise ValueError(f"{entity_type} with id {entity_id} not found")
 
             old_value = row[0]
 
-            # Check if edit already exists
-            cursor.execute("""
-                SELECT id, old_value FROM edits
-                WHERE entity_type = ? AND entity_id = ? AND field_name = ? AND status = 'active'
-            """, (entity_type, entity_id, field_name))
-
-            existing_edit = cursor.fetchone()
-
-            if existing_edit:
-                # Update existing edit
-                cursor.execute("""
-                    UPDATE edits
-                    SET new_value = ?, edited_at = CURRENT_TIMESTAMP, edited_by = ?
-                    WHERE id = ?
-                """, (str(new_value) if new_value is not None else None, edited_by, existing_edit['id']))
-                edit_id = existing_edit['id']
-            else:
-                # Insert new edit
-                cursor.execute("""
-                    INSERT INTO edits (entity_type, entity_id, field_name, old_value, new_value, edited_by)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (
-                    entity_type,
-                    entity_id,
-                    field_name,
-                    str(old_value) if old_value is not None else None,
-                    str(new_value) if new_value is not None else None,
-                    edited_by
-                ))
-                edit_id = cursor.lastrowid
-
-            # Update last_modified timestamp on entity
-            if entity_type == 'book':
-                cursor.execute("""
-                    UPDATE books SET last_modified = CURRENT_TIMESTAMP WHERE id = ?
-                """, (entity_id,))
-            elif entity_type == 'quote':
-                cursor.execute("""
-                    UPDATE quotes SET last_modified = CURRENT_TIMESTAMP WHERE id = ?
-                """, (entity_id,))
+            # Update the field directly
+            cursor.execute(
+                f"UPDATE {table_name} SET {field_name} = ? WHERE id = ?",
+                (new_value, entity_id)
+            )
 
             conn.commit()
 
             return {
-                "edit_id": edit_id,
                 "entity_type": entity_type,
                 "entity_id": entity_id,
                 "field_name": field_name,
                 "old_value": old_value,
                 "new_value": new_value,
-                "status": "active"
+                "status": "success"
             }
-
-        finally:
-            conn.close()
 
     def save_multiple_edits(
         self,
@@ -174,69 +93,34 @@ class EditorService:
     ) -> List[Dict[str, Any]]:
         """
         Save multiple field edits at once.
-        More efficient than calling save_edit multiple times.
+        Uses transaction to ensure atomicity.
         """
         results = []
-        for field_name, new_value in updates.items():
+
+        with sqlite3.connect(self.db_path) as conn:
             try:
-                result = self.save_edit(entity_type, entity_id, field_name, new_value, edited_by)
-                results.append(result)
+                for field_name, new_value in updates.items():
+                    result = self.save_edit(entity_type, entity_id, field_name, new_value, edited_by)
+                    results.append(result)
+                conn.commit()
             except Exception as e:
+                conn.rollback()
                 results.append({
-                    "field_name": field_name,
                     "error": str(e)
                 })
 
         return results
 
-    def get_active_edits(self, entity_type: str, entity_id: int) -> List[Dict[str, Any]]:
-        """Get all active edits for an entity"""
-        conn = self._get_connection()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                SELECT id, field_name, old_value, new_value, edited_at, edited_by
-                FROM edits
-                WHERE entity_type = ? AND entity_id = ? AND status = 'active'
-                ORDER BY edited_at DESC
-            """, (entity_type, entity_id))
-
-            return [dict(row) for row in cursor.fetchall()]
-
-        finally:
-            conn.close()
-
-    def revert_edit(self, edit_id: int) -> Dict[str, Any]:
-        """Revert an edit by marking it as reverted"""
-        conn = self._get_connection()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                UPDATE edits SET status = 'reverted' WHERE id = ?
-            """, (edit_id,))
-
-            if cursor.rowcount == 0:
-                raise ValueError(f"Edit {edit_id} not found")
-
-            conn.commit()
-
-            return {"edit_id": edit_id, "status": "reverted"}
-
-        finally:
-            conn.close()
-
-    def get_entity_with_edits(self, entity_type: str, entity_id: int) -> Optional[Dict[str, Any]]:
+    def get_entity(self, entity_type: str, entity_id: int) -> Optional[Dict[str, Any]]:
         """
-        Get entity data with all active edits applied.
+        Get entity data from database.
         Returns None if entity not found.
         """
-        conn = self._get_connection()
-        cursor = conn.cursor()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-        try:
-            # Get base entity data
+            # Get entity data
             if entity_type == 'book':
                 cursor.execute("SELECT * FROM books WHERE id = ?", (entity_id,))
             elif entity_type == 'quote':
@@ -248,15 +132,7 @@ class EditorService:
             if not row:
                 return None
 
-            base_data = dict(row)
-
-            # Apply edits overlay
-            result = self.apply_edits(entity_type, entity_id, base_data)
-
-            return result
-
-        finally:
-            conn.close()
+            return dict(row)
 
 
 # Singleton instance

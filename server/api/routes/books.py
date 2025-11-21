@@ -86,19 +86,15 @@ async def get_book_quotes(
             paginated_quotes = all_quotes[offset:offset + limit]
             has_more = (offset + limit) < total_count
 
-            # Format response with edits applied
+            # Format response
             quotes = []
             for row in paginated_quotes:
-                # Apply edits overlay
-                quote_data = dict(row)
-                quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
-
                 quotes.append(Quote(
-                    id=quote_with_edits['id'],
-                    page=quote_with_edits.get('page'),
-                    section=quote_with_edits.get('section'),
-                    quote_text=quote_with_edits['quote_text'],
-                    keywords=quote_with_edits.get('keywords')
+                    id=row['id'],
+                    page=row['page'],
+                    section=row.get('section'),
+                    quote_text=row['quote_text'],
+                    keywords=row.get('keywords')
                 ))
 
         return BookQuotesResponse(
@@ -143,8 +139,7 @@ async def get_book_citation(
             if not book_row:
                 raise HTTPException(status_code=404, detail="Book not found")
 
-            # Apply edits overlay
-            book = editor.apply_edits('book', book_id, dict(book_row))
+            book = dict(book_row)
 
         # Generate basic citation
         parts = []
