@@ -1,11 +1,12 @@
-# Data directories containing extracts and bibliography content
-data/extracts/
-data/biblio/
+# Data directories - ignore all data files (PDFs, CSVs, extracts, bibliography)
+data/
 
 # Bibliography working files and PDFs
 biblio_pro/
 FINAL_BIBLIO_ATLANTA.csv
 TEST_LOCAL.md
+*.csv
+*.pdf
 
 # Python
 __pycache__/
