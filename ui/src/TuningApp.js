@@ -199,9 +199,33 @@ const TuningApp = () => {
 
 
   return (
-    <div className="min-h-screen bg-white p-6 font-mono">
+    <div className="min-h-screen bg-white p-4 font-mono">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center">Scoring Tuning Interface</h1>
+        {/* Header */}
+        <div className="mb-8 pb-6 border-b-2 border-black">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">TUNING INTERFACE</h1>
+              <p className="text-gray-600 italic">Adjust search scoring parameters and field weights</p>
+              <p className="text-xs text-red-600 font-mono mt-1">API: {API_URL}</p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="/"
+                className="text-sm px-3 py-1 border border-blue-300 rounded hover:bg-blue-50 transition-colors text-blue-700"
+              >
+                ← Back to Search
+              </a>
+              <a
+                href="/data"
+                className="text-sm px-3 py-1 border border-green-300 rounded hover:bg-green-50 transition-colors text-green-700"
+              >
+                Data Management
+              </a>
+            </div>
+          </div>
+        </div>
 
         {message && (
           <div className="mb-4 p-3 bg-gray-100 border rounded text-sm">
