@@ -35,12 +35,30 @@ console.log('API_URL being used:', API_URL);
 console.log('Environment variable:', process.env.REACT_APP_API_URL);
 
 // Components
-const SpinnerAscii = () => <span className="text-gray-500">[ .... ]</span>;
+const SpinnerAscii = () => (
+  <span className="text-gray-500" role="status" aria-label="Loading">
+    [ .... ]
+  </span>
+);
+
+const LoadingOverlay = ({ message = "Loading..." }) => (
+  <div className="text-center py-12" role="status" aria-live="polite">
+    <div className="inline-block">
+      <SpinnerAscii />
+      <p className="text-sm text-gray-600 mt-2">{message}</p>
+    </div>
+  </div>
+);
 
 const Toast = ({ message, visible }) => {
   if (!visible) return null;
   return (
-    <div className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded text-sm">
+    <div
+      className="fixed bottom-4 right-4 bg-black text-white px-3 py-2 rounded text-sm"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {message}
     </div>
   );
@@ -55,25 +73,34 @@ const SearchBar = ({ query, setQuery, onSearch, loading }) => {
   return (
     <div className="mb-8">
       <div className="mb-4">
-        <label className="block text-sm font-bold uppercase tracking-wide mb-2">Search Query</label>
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+        <label
+          htmlFor="search-input"
+          className="block text-sm font-bold uppercase tracking-wide mb-2"
+        >
+          Search Query
+        </label>
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3" role="search">
           <input
+            id="search-input"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Enter search terms..."
-            className="flex-1 border-2 border-gray-300 p-3 bg-white focus:border-black transition-colors"
+            className="flex-1 border-2 border-gray-300 p-3 bg-white focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200 transition-colors"
             disabled={loading}
+            aria-label="Search query input"
+            aria-describedby="search-tip"
           />
           <button
             type="submit"
             disabled={loading || !query.trim()}
-            className="px-6 py-3 bg-black text-white font-bold hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-black text-white font-bold hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400"
+            aria-label={loading ? 'Searching...' : 'Search'}
           >
             {loading ? 'SEARCHING...' : 'SEARCH'}
           </button>
         </form>
-        <p className="text-sm text-gray-500 mt-2 italic">
+        <p id="search-tip" className="text-sm text-gray-500 mt-2 italic">
           Tip: Use "quotes" for exact phrase matching
         </p>
       </div>
@@ -273,13 +300,16 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
   };
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+    <div className="mt-4 p-4 bg-gray-50 rounded-lg" role="region" aria-label={relevant ? "Relevant quotes" : "All quotes"}>
       <h4 className="font-bold mb-3">
         {relevant ? `Relevant Quotes (${totalCount})` : `All Quotes (${totalCount})`}
       </h4>
 
       {loading && offset === 0 ? (
-        <SpinnerAscii />
+        <div className="py-4" role="status" aria-live="polite">
+          <SpinnerAscii />
+          <p className="text-sm text-gray-500 mt-2">Loading quotes...</p>
+        </div>
       ) : (
         <div className="space-y-4">
           {quotes.map((quote, idx) => {
@@ -325,7 +355,8 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
                   </div>
                   <button
                     onClick={() => onCopy(quote)}
-                    className="text-sm text-gray-600 hover:text-black underline transition-colors"
+                    className="text-sm text-gray-600 hover:text-black underline transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+                    aria-label={`Copy quote: ${quote.quote_text.substring(0, 50)}...`}
                   >
                     [copy]
                   </button>
@@ -339,7 +370,8 @@ const QuotesPanel = ({ bookId, relevant, query, onCopy, onCountUpdate }) => {
               <button
                 onClick={handleExpand}
                 disabled={loading}
-                className="text-sm font-bold text-gray-600 hover:text-black underline transition-colors disabled:opacity-50"
+                className="text-sm font-bold text-gray-600 hover:text-black underline transition-colors disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                aria-label="Load 10 more quotes"
               >
                 {loading ? <SpinnerAscii /> : 'expand (+10 more)'}
               </button>
@@ -725,7 +757,7 @@ const ResultsList = ({
 }) => {
   if (results.length === 0 && hasSearched) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12" role="status" aria-live="polite">
         <p className="text-lg text-gray-600">No matches found</p>
         <p className="text-sm text-gray-500 mt-2 italic">
           Try using "quotes" for exact phrase matching
@@ -741,7 +773,7 @@ const ResultsList = ({
   return (
     <>
       {/* Results header */}
-      <div className="mb-6 pb-2 border-b border-gray-300">
+      <div className="mb-6 pb-2 border-b border-gray-300" role="status" aria-live="polite">
         <span className="font-bold">{total}</span>
         <span className="text-gray-600"> result{total !== 1 ? 's' : ''} found</span>
         {totalPages > 1 && (
@@ -752,7 +784,7 @@ const ResultsList = ({
       </div>
 
       {/* Book cards */}
-      <div className="space-y-6">
+      <div className="space-y-6" role="list" aria-label="Search results">
         {results.map((result, index) => (
           <BookCard
             key={result.book.id}
@@ -773,27 +805,32 @@ const ResultsList = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-8 pt-6 border-t border-gray-300 flex justify-center items-center gap-4">
+        <nav
+          className="mt-8 pt-6 border-t border-gray-300 flex justify-center items-center gap-4"
+          aria-label="Search results pagination"
+        >
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage === 1}
-            className="font-bold text-gray-700 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="font-bold text-gray-700 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+            aria-label="Go to previous page"
           >
             [prev]
           </button>
 
-          <span className="px-4 py-2 bg-gray-100 font-bold">
+          <span className="px-4 py-2 bg-gray-100 font-bold" aria-current="page" aria-label={`Page ${currentPage} of ${totalPages}`}>
             {currentPage} / {totalPages}
           </span>
 
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage === totalPages}
-            className="font-bold text-gray-700 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+            className="font-bold text-gray-700 hover:text-black disabled:text-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
+            aria-label="Go to next page"
           >
             [next]
           </button>
-        </div>
+        </nav>
       )}
     </>
   );
@@ -1052,9 +1089,7 @@ function App() {
 
       {/* Results */}
       {loading ? (
-        <div className="text-center py-8">
-          <SpinnerAscii />
-        </div>
+        <LoadingOverlay message="Searching for quotes..." />
       ) : (
         <ResultsList
           results={results}
