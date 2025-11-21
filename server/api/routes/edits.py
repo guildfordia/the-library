@@ -1,13 +1,18 @@
 """
 Edit endpoints for The Library API.
-Allows public editing of books and quotes using overlay approach.
+Allows public editing of books and quotes with proper error handling.
 """
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 
-from api.services.editor import editor
+from api.services.editor import (
+    editor,
+    InvalidFieldError,
+    EntityNotFoundError,
+    DatabaseLockError
+)
 
 
 router = APIRouter()
@@ -88,21 +93,13 @@ async def edit_book(book_id: int, updates: BookEditRequest, request: Request):
         if not book:
             raise HTTPException(status_code=404, detail=f"Book {book_id} not found")
 
-        # Save edits
+        # Save edits (transaction ensures all succeed or all fail)
         results = editor.save_multiple_edits(
             entity_type='book',
             entity_id=book_id,
             updates=updates_dict,
             edited_by=client_ip
         )
-
-        # Check for errors
-        errors = [r for r in results if 'error' in r]
-        if errors:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Some edits failed: {errors}"
-            )
 
         return EditResponse(
             success=True,
@@ -112,10 +109,16 @@ async def edit_book(book_id: int, updates: BookEditRequest, request: Request):
             message=f"Successfully updated {len(results)} field(s)"
         )
 
+    except InvalidFieldError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except DatabaseLockError as e:
+        raise HTTPException(status_code=503, detail=f"Database temporarily unavailable: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Edit failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
 @router.put("/quotes/{quote_id}", response_model=EditResponse)
@@ -149,21 +152,13 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
         if not quote:
             raise HTTPException(status_code=404, detail=f"Quote {quote_id} not found")
 
-        # Save edits
+        # Save edits (transaction ensures all succeed or all fail)
         results = editor.save_multiple_edits(
             entity_type='quote',
             entity_id=quote_id,
             updates=updates_dict,
             edited_by=client_ip
         )
-
-        # Check for errors
-        errors = [r for r in results if 'error' in r]
-        if errors:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Some edits failed: {errors}"
-            )
 
         return EditResponse(
             success=True,
@@ -173,10 +168,16 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
             message=f"Successfully updated {len(results)} field(s)"
         )
 
+    except InvalidFieldError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except EntityNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except DatabaseLockError as e:
+        raise HTTPException(status_code=503, detail=f"Database temporarily unavailable: {str(e)}")
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Edit failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
 # Note: Edit history and revert functionality removed
