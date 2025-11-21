@@ -14,6 +14,16 @@ class EditorService:
     Edits are stored in separate table and merged on read.
     """
 
+    # Whitelist of allowed fields to prevent SQL injection
+    ALLOWED_BOOK_FIELDS = {
+        'title', 'authors', 'year', 'publisher', 'doi', 'issn',
+        'entry_type', 'doc_keywords', 'doc_summary', 'container'
+    }
+
+    ALLOWED_QUOTE_FIELDS = {
+        'quote_text', 'page', 'keywords', 'section'
+    }
+
     def __init__(self, db_path: str = "index/library.db"):
         self.db_path = db_path
 
@@ -73,17 +83,25 @@ class EditorService:
         Save an edit to the edits table.
         Uses REPLACE to handle updates to existing edits.
         """
+        # Validate entity_type and field_name to prevent SQL injection
+        if entity_type == 'book':
+            if field_name not in self.ALLOWED_BOOK_FIELDS:
+                raise ValueError(f"Invalid field '{field_name}' for book edits. Allowed fields: {', '.join(self.ALLOWED_BOOK_FIELDS)}")
+        elif entity_type == 'quote':
+            if field_name not in self.ALLOWED_QUOTE_FIELDS:
+                raise ValueError(f"Invalid field '{field_name}' for quote edits. Allowed fields: {', '.join(self.ALLOWED_QUOTE_FIELDS)}")
+        else:
+            raise ValueError(f"Invalid entity_type: {entity_type}. Must be 'book' or 'quote'")
+
         conn = self._get_connection()
         cursor = conn.cursor()
 
         try:
-            # Get current value from base table
+            # Get current value from base table (field_name now validated above)
             if entity_type == 'book':
                 cursor.execute(f"SELECT {field_name} FROM books WHERE id = ?", (entity_id,))
             elif entity_type == 'quote':
                 cursor.execute(f"SELECT {field_name} FROM quotes WHERE id = ?", (entity_id,))
-            else:
-                raise ValueError(f"Invalid entity_type: {entity_type}")
 
             row = cursor.fetchone()
             if not row:

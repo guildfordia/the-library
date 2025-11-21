@@ -51,57 +51,55 @@ async def get_book_quotes(
     try:
         import sqlite3
 
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
 
-        # Base query to get quotes for this book
-        if relevant and q.strip():
-            # Get relevant quotes using FTS search
-            sql = """
-            SELECT
-                q.id, q.quote_text, q.page, q.section, q.keywords,
-                fts.rank as bm25_score
-            FROM quotes_fts fts
-            JOIN quotes q ON q.id = fts.rowid
-            WHERE q.book_id = ? AND quotes_fts MATCH ?
-            ORDER BY fts.rank
-            """
-            cursor = conn.cursor()
-            cursor.execute(sql, (book_id, q.strip()))
-        else:
-            # Get all quotes for this book
-            sql = """
-            SELECT id, quote_text, page, section, keywords
-            FROM quotes
-            WHERE book_id = ?
-            ORDER BY page, id
-            """
-            cursor = conn.cursor()
-            cursor.execute(sql, (book_id,))
+            # Base query to get quotes for this book
+            if relevant and q.strip():
+                # Get relevant quotes using FTS search
+                sql = """
+                SELECT
+                    q.id, q.quote_text, q.page, q.section, q.keywords,
+                    fts.rank as bm25_score
+                FROM quotes_fts fts
+                JOIN quotes q ON q.id = fts.rowid
+                WHERE q.book_id = ? AND quotes_fts MATCH ?
+                ORDER BY fts.rank
+                """
+                cursor = conn.cursor()
+                cursor.execute(sql, (book_id, q.strip()))
+            else:
+                # Get all quotes for this book
+                sql = """
+                SELECT id, quote_text, page, section, keywords
+                FROM quotes
+                WHERE book_id = ?
+                ORDER BY page, id
+                """
+                cursor = conn.cursor()
+                cursor.execute(sql, (book_id,))
 
-        all_quotes = cursor.fetchall()
-        total_count = len(all_quotes)
+            all_quotes = cursor.fetchall()
+            total_count = len(all_quotes)
 
-        # Apply pagination
-        paginated_quotes = all_quotes[offset:offset + limit]
-        has_more = (offset + limit) < total_count
+            # Apply pagination
+            paginated_quotes = all_quotes[offset:offset + limit]
+            has_more = (offset + limit) < total_count
 
-        # Format response with edits applied
-        quotes = []
-        for row in paginated_quotes:
-            # Apply edits overlay
-            quote_data = dict(row)
-            quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
+            # Format response with edits applied
+            quotes = []
+            for row in paginated_quotes:
+                # Apply edits overlay
+                quote_data = dict(row)
+                quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
 
-            quotes.append(Quote(
-                id=quote_with_edits['id'],
-                page=quote_with_edits.get('page'),
-                section=quote_with_edits.get('section'),
-                quote_text=quote_with_edits['quote_text'],
-                keywords=quote_with_edits.get('keywords')
-            ))
-
-        conn.close()
+                quotes.append(Quote(
+                    id=quote_with_edits['id'],
+                    page=quote_with_edits.get('page'),
+                    section=quote_with_edits.get('section'),
+                    quote_text=quote_with_edits['quote_text'],
+                    keywords=quote_with_edits.get('keywords')
+                ))
 
         return BookQuotesResponse(
             book_id=book_id,
@@ -131,23 +129,22 @@ async def get_book_citation(
     try:
         import sqlite3
 
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
 
-        cursor = conn.cursor()
-        cursor.execute("""
-        SELECT title, authors, year, publisher, container, doi, issn, source_path
-        FROM books WHERE id = ?
-        """, (book_id,))
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT title, authors, year, publisher, container, doi, issn, source_path
+            FROM books WHERE id = ?
+            """, (book_id,))
 
-        book_row = cursor.fetchone()
-        conn.close()
+            book_row = cursor.fetchone()
 
-        if not book_row:
-            raise HTTPException(status_code=404, detail="Book not found")
+            if not book_row:
+                raise HTTPException(status_code=404, detail="Book not found")
 
-        # Apply edits overlay
-        book = editor.apply_edits('book', book_id, dict(book_row))
+            # Apply edits overlay
+            book = editor.apply_edits('book', book_id, dict(book_row))
 
         # Generate basic citation
         parts = []

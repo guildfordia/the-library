@@ -2,6 +2,11 @@
 data/extracts/
 data/biblio/
 
+# Bibliography working files and PDFs
+biblio_pro/
+FINAL_BIBLIO_ATLANTA.csv
+TEST_LOCAL.md
+
 # Python
 __pycache__/
 *.py[cod]
