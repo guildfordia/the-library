@@ -13,7 +13,10 @@ RUN npm ci --silent
 # Copy source code
 COPY . .
 
-# Build the app
+# Build arg for API URL (must be set at build time for React)
+ARG REACT_APP_API_URL=/api
+
+# Build the app with environment variable
 RUN npm run build
 
 # Production stage - serve with nginx

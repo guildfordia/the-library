@@ -27,11 +27,11 @@ services:
     build:
       context: ./ui
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=/api
     container_name: library-ui
     expose:
       - "3000"
-    environment:
-      - REACT_APP_API_URL=/api
     depends_on:
       - library-api
     restart: unless-stopped
