@@ -81,13 +81,16 @@ const SearchBar = ({ query, setQuery, onSearch, loading }) => {
   );
 };
 
-const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
+const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query, expertMode = false }) => {
   // Use book data directly from parent (BookCard manages state)
   const bookData = book;
 
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-      <h4 className="font-bold mb-3">Book Details <span className="text-xs font-normal text-gray-500">(click to edit)</span></h4>
+      <h4 className="font-bold mb-3">
+        Book Details
+        {expertMode && <span className="text-xs font-normal text-gray-500"> (click to edit)</span>}
+      </h4>
       <div className="space-y-3 text-sm">
         <div>
           <span className="font-semibold text-gray-600 block mb-1">Title:</span>
@@ -97,6 +100,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="title"
             value={bookData.title}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -107,6 +111,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="authors"
             value={bookData.authors}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -117,6 +122,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="container"
             value={bookData.themes || bookData.container}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -127,6 +133,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="entry_type"
             value={bookData.type || bookData.entry_type}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -137,6 +144,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="year"
             value={bookData.year?.toString()}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -147,6 +155,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="publisher"
             value={bookData.publisher}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -157,6 +166,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="doi"
             value={bookData.doi}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -167,6 +177,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="issn"
             value={bookData.isbn || bookData.issn}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -178,6 +189,7 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             value={bookData.summary || bookData.doc_summary}
             onSave={onFieldSave}
             multiline={true}
+            disabled={!expertMode}
           />
         </div>
         <div>
@@ -188,13 +200,16 @@ const DetailsPanel = ({ book, onCopyCitation, onFieldSave, query }) => {
             fieldName="doc_keywords"
             value={bookData.keywords || bookData.doc_keywords}
             onSave={onFieldSave}
+            disabled={!expertMode}
           />
         </div>
       </div>
       <div className="flex justify-between items-center mt-4 pt-3 border-t border-gray-200">
-        <div className="text-xs text-gray-500">
-          ✎ Click any field above to edit
-        </div>
+        {expertMode && (
+          <div className="text-xs text-gray-500">
+            ✎ Click any field above to edit
+          </div>
+        )}
         <button
           onClick={() => onCopyCitation(bookData)}
           className="text-sm text-gray-600 hover:text-black underline transition-colors"
@@ -663,7 +678,7 @@ const BookCard = ({
 
       {/* Expanded panels */}
       {isExpanded && expandedPanel === 'details' && (
-        <DetailsPanel book={bookData} onCopyCitation={onCopyCitation} onFieldSave={handleBookUpdate} query={query} />
+        <DetailsPanel book={bookData} onCopyCitation={onCopyCitation} onFieldSave={handleBookUpdate} query={query} expertMode={expertMode} />
       )}
 
       {isExpanded && expandedPanel === 'relevant' && (

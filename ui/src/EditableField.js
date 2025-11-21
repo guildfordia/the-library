@@ -13,7 +13,8 @@ export const EditableField = ({
   value,
   onSave,
   multiline = false,
-  className = ""
+  className = "",
+  disabled = false  // New prop to disable editing
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value || '');
@@ -21,6 +22,7 @@ export const EditableField = ({
   const [error, setError] = useState(null);
 
   const handleEdit = () => {
+    if (disabled) return;  // Don't allow editing if disabled
     setIsEditing(true);
     setEditValue(value || '');
   };
@@ -137,6 +139,15 @@ export const EditableField = ({
         <div className="text-xs text-gray-500 mt-1">
           {multiline ? 'Ctrl+Enter to save, Esc to cancel' : 'Enter to save, Esc to cancel'}
         </div>
+      </div>
+    );
+  }
+
+  // If disabled, render as plain text without any edit affordances
+  if (disabled) {
+    return (
+      <div className={className}>
+        {value || <span className="text-gray-400 italic">—</span>}
       </div>
     );
   }
