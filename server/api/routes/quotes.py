@@ -3,7 +3,7 @@ Quotes endpoint for The Library API.
 Handles individual quote retrieval with full citation.
 """
 
-from fastapi import APIRouter, HTTPException, Path
+from fastapi import APIRouter, HTTPException, Path, Request
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -88,11 +88,17 @@ async def get_quote(
         raise HTTPException(status_code=500, detail=f"Error retrieving quote: {str(e)}")
 
 @router.post("/admin/reindex")
-async def reindex():
+async def reindex(request: Request):
     """
     Administrative endpoint to rebuild the search index.
     Triggers the indexer to rebuild from CSV and JSON sources.
+
+    Rate limit: 5 requests per hour per IP address.
     """
+    # Apply rate limiting
+    limiter = request.app.state.limiter
+    await limiter.hit("5/hour", request=request)
+
     try:
         import subprocess
         import sys
@@ -139,24 +145,22 @@ async def get_stats():
     try:
         import sqlite3
 
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
 
-        # Get table counts
-        cursor.execute("SELECT COUNT(*) FROM books")
-        book_count = cursor.fetchone()[0]
+            # Get table counts
+            cursor.execute("SELECT COUNT(*) FROM books")
+            book_count = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM quotes")
-        quote_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM quotes")
+            quote_count = cursor.fetchone()[0]
 
-        # Get FTS stats
-        cursor.execute("SELECT COUNT(*) FROM quotes_fts")
-        fts_count = cursor.fetchone()[0]
+            # Get FTS stats
+            cursor.execute("SELECT COUNT(*) FROM quotes_fts")
+            fts_count = cursor.fetchone()[0]
 
-        # Get database file size
+        # Get database file size (outside connection)
         db_size = os.path.getsize(db_path)
-
-        conn.close()
 
         return {
             "books": book_count,

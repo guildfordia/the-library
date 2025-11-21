@@ -26,12 +26,6 @@ class EditorService:
     def __init__(self, db_path: str = "index/library.db"):
         self.db_path = db_path
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Get database connection with row factory"""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-
     def save_edit(
         self,
         entity_type: str,

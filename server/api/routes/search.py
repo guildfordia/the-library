@@ -3,7 +3,7 @@ Search endpoint for The Library API.
 Handles quote search with FTS5 + BM25 scoring.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
@@ -52,12 +52,15 @@ class SearchResponse(BaseModel):
 
 @router.get("", response_model=SearchResponse)
 async def search_quotes(
+    request: Request,
     q: str = Query(..., description="Search query with support for quoted phrases, boolean operators, and prefix matching"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
     limit: int = Query(20, ge=1, le=100, description="Number of results per page")
 ):
     """
     Search for quotes across the library.
+
+    Rate limit: 100 requests per minute per IP address.
 
     Supports:
     - Quoted phrases: "exact phrase" (gets phrase bonus in scoring)
@@ -67,6 +70,9 @@ async def search_quotes(
 
     Returns book-grouped results with expandable quotes.
     """
+    # Apply rate limiting
+    limiter = request.app.state.limiter
+    await limiter.hit("100/minute", request=request)
 
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required")

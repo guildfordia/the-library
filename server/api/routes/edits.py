@@ -62,11 +62,17 @@ async def edit_book(book_id: int, updates: BookEditRequest, request: Request):
     """
     Edit book metadata.
 
-    Uses overlay approach - edits stored separately, merged on read.
-    Source CSV files remain unchanged until admin exports edits.
+    Edits are written directly to the database.
+    Export database to preserve edits before reindexing.
+
+    Rate limit: 50 requests per minute per IP address.
 
     **All fields are optional** - only send fields you want to update.
     """
+    # Apply rate limiting
+    limiter = request.app.state.limiter
+    await limiter.hit("50/minute", request=request)
+
     try:
         # Get client IP for tracking
         client_ip = request.client.host if request.client else "unknown"
@@ -78,7 +84,7 @@ async def edit_book(book_id: int, updates: BookEditRequest, request: Request):
             raise HTTPException(status_code=400, detail="No fields to update")
 
         # Verify book exists
-        book = editor.get_entity_with_edits('book', book_id)
+        book = editor.get_entity('book', book_id)
         if not book:
             raise HTTPException(status_code=404, detail=f"Book {book_id} not found")
 
@@ -117,11 +123,17 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
     """
     Edit quote content or metadata.
 
-    Uses overlay approach - edits stored separately, merged on read.
-    Source JSON files remain unchanged until admin exports edits.
+    Edits are written directly to the database.
+    Export database to preserve edits before reindexing.
+
+    Rate limit: 50 requests per minute per IP address.
 
     **All fields are optional** - only send fields you want to update.
     """
+    # Apply rate limiting
+    limiter = request.app.state.limiter
+    await limiter.hit("50/minute", request=request)
+
     try:
         # Get client IP for tracking
         client_ip = request.client.host if request.client else "unknown"
@@ -133,7 +145,7 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
             raise HTTPException(status_code=400, detail="No fields to update")
 
         # Verify quote exists
-        quote = editor.get_entity_with_edits('quote', quote_id)
+        quote = editor.get_entity('quote', quote_id)
         if not quote:
             raise HTTPException(status_code=404, detail=f"Quote {quote_id} not found")
 
@@ -167,55 +179,6 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
         raise HTTPException(status_code=500, detail=f"Edit failed: {str(e)}")
 
 
-@router.get("/books/{book_id}/edits")
-async def get_book_edits(book_id: int):
-    """
-    Get all active edits for a book.
-    Useful for showing edit history or detecting conflicts.
-    """
-    try:
-        edits = editor.get_active_edits('book', book_id)
-        return {
-            "book_id": book_id,
-            "active_edits": edits,
-            "count": len(edits)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.get("/quotes/{quote_id}/edits")
-async def get_quote_edits(quote_id: int):
-    """
-    Get all active edits for a quote.
-    Useful for showing edit history or detecting conflicts.
-    """
-    try:
-        edits = editor.get_active_edits('quote', quote_id)
-        return {
-            "quote_id": quote_id,
-            "active_edits": edits,
-            "count": len(edits)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/edits/{edit_id}")
-async def revert_edit(edit_id: int):
-    """
-    Revert a specific edit.
-    Marks edit as 'reverted' - original value will be shown again.
-    """
-    try:
-        result = editor.revert_edit(edit_id)
-        return {
-            "success": True,
-            "edit_id": edit_id,
-            "status": result['status'],
-            "message": f"Edit {edit_id} reverted successfully"
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Note: Edit history and revert functionality removed
+# Edits are now written directly to database
+# Use conflicts API and export/import workflow for managing changes

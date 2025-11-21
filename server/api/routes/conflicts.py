@@ -41,18 +41,17 @@ async def list_conflicts(resolved: bool = False):
     - **resolved=true**: Only resolved conflicts
     """
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
 
-        if resolved:
-            sql = "SELECT * FROM conflicts WHERE resolved_at IS NOT NULL ORDER BY detected_at DESC"
-        else:
-            sql = "SELECT * FROM conflicts WHERE resolved_at IS NULL ORDER BY detected_at DESC"
+            if resolved:
+                sql = "SELECT * FROM conflicts WHERE resolved_at IS NOT NULL ORDER BY detected_at DESC"
+            else:
+                sql = "SELECT * FROM conflicts WHERE resolved_at IS NULL ORDER BY detected_at DESC"
 
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        rows = cursor.fetchall()
-        conn.close()
+            cursor = conn.cursor()
+            cursor.execute(sql)
+            rows = cursor.fetchall()
 
         return [Conflict(**dict(row)) for row in rows]
 
@@ -64,13 +63,12 @@ async def list_conflicts(resolved: bool = False):
 async def get_conflict(conflict_id: int):
     """Get details of a specific conflict"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
 
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,))
-        row = cursor.fetchone()
-        conn.close()
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,))
+            row = cursor.fetchone()
 
         if not row:
             raise HTTPException(status_code=404, detail="Conflict not found")
@@ -99,27 +97,26 @@ async def resolve_conflict(conflict_id: int, request: ResolveConflictRequest):
         )
 
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
 
-        # Get conflict details
-        cursor.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,))
-        conflict = cursor.fetchone()
+            # Get conflict details
+            cursor.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,))
+            conflict = cursor.fetchone()
 
-        if not conflict:
-            raise HTTPException(status_code=404, detail="Conflict not found")
+            if not conflict:
+                raise HTTPException(status_code=404, detail="Conflict not found")
 
-        # Mark as resolved
-        cursor.execute("""
-            UPDATE conflicts
-            SET resolved_at = CURRENT_TIMESTAMP,
-                resolution = ?,
-                notes = ?
-            WHERE id = ?
-        """, (request.resolution, request.notes, conflict_id))
+            # Mark as resolved
+            cursor.execute("""
+                UPDATE conflicts
+                SET resolved_at = CURRENT_TIMESTAMP,
+                    resolution = ?,
+                    notes = ?
+                WHERE id = ?
+            """, (request.resolution, request.notes, conflict_id))
 
-        conn.commit()
-        conn.close()
+            conn.commit()
 
         return {
             "success": True,
@@ -138,24 +135,22 @@ async def resolve_conflict(conflict_id: int, request: ResolveConflictRequest):
 async def conflict_stats():
     """Get statistics about conflicts"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
 
-        cursor.execute("SELECT COUNT(*) FROM conflicts WHERE resolved_at IS NULL")
-        unresolved = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM conflicts WHERE resolved_at IS NULL")
+            unresolved = cursor.fetchone()[0]
 
-        cursor.execute("SELECT COUNT(*) FROM conflicts WHERE resolved_at IS NOT NULL")
-        resolved = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM conflicts WHERE resolved_at IS NOT NULL")
+            resolved = cursor.fetchone()[0]
 
-        cursor.execute("""
-            SELECT entity_type, COUNT(*) as count
-            FROM conflicts
-            WHERE resolved_at IS NULL
-            GROUP BY entity_type
-        """)
-        by_type = {row[0]: row[1] for row in cursor.fetchall()}
-
-        conn.close()
+            cursor.execute("""
+                SELECT entity_type, COUNT(*) as count
+                FROM conflicts
+                WHERE resolved_at IS NULL
+                GROUP BY entity_type
+            """)
+            by_type = {row[0]: row[1] for row in cursor.fetchall()}
 
         return {
             "unresolved": unresolved,
