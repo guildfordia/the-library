@@ -8,8 +8,10 @@ def test_parser_quoted_phrase():
     parser = QueryParser()
     result = parser.parse('"Black Mountain College"')
 
+    # Exact phrase extracted for phrase bonus scoring
     assert result.exact_phrase == "Black Mountain College"
-    assert '"Black Mountain College"' in result.fts_query
+    # FTS query uses OR'd terms for broader matching with BM25 ranking
+    assert 'Black OR Mountain OR College' in result.fts_query
 
 
 def test_parser_boolean_and():

@@ -87,6 +87,8 @@ curl "http://localhost:8000/search?q=educat*"
 - `GET /quotes/admin/stats` - Database statistics
 - `GET /health` - Health check
 
+**Full API documentation**: See [docs/API.md](docs/API.md)
+
 ## Data Structure
 
 ```
@@ -115,6 +117,23 @@ uvicorn api.main:app --reload --port 8000
 # View API documentation
 open http://localhost:8000/docs
 ```
+
+### Testing
+
+```bash
+cd server
+
+# Run all tests
+make test
+
+# Run specific test suites
+make test-unit           # Unit tests
+make test-integration    # Integration tests
+make test-performance    # Performance benchmarks
+make test-coverage       # Generate coverage report
+```
+
+**Full testing documentation**: See [docs/TESTING.md](docs/TESTING.md)
 
 ## Configuration
 
