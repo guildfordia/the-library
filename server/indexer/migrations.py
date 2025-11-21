@@ -1,6 +1,13 @@
 """
 Database migrations for The Library.
-Handles schema updates for edit workflow and conflict detection.
+
+Creates supporting tables for:
+- edits: Legacy/unused audit trail table
+- conflicts: CSV/JSON vs DB conflict detection
+- metadata: Tracking timestamps on books/quotes
+
+NOTE: User edits are written DIRECTLY to books/quotes tables,
+not to the edits table.
 """
 
 import sqlite3
@@ -10,8 +17,11 @@ from pathlib import Path
 
 def create_edits_table(conn: sqlite3.Connection):
     """
-    Create edits table for overlay approach.
-    Stores user edits without modifying source CSV/JSON files.
+    Create edits table for audit trail (legacy/unused).
+
+    NOTE: This table is NOT currently used. Edits are written directly
+    to books/quotes tables. This table remains for potential future
+    audit trail or undo functionality.
     """
     conn.execute("""
     CREATE TABLE IF NOT EXISTS edits (

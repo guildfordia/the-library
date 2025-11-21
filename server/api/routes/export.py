@@ -1,6 +1,7 @@
 """
 Export endpoint for The Library API.
-Exports the complete database (with edits applied) as CSV + JSON files in a ZIP archive.
+Exports the complete database as CSV + JSON files in a ZIP archive.
+All user edits are included (edits are written directly to the database tables).
 """
 
 import os
@@ -22,13 +23,16 @@ router = APIRouter()
 @router.get("/export")
 async def export_database(request: Request):
     """
-    Export the complete database with all edits applied.
+    Export the complete database including all user edits.
+
+    Edits are stored directly in the books/quotes tables, so this export
+    contains the current state of all data.
 
     Rate limit: 10 requests per hour per IP address.
 
     Returns a ZIP file containing:
-    - biblio/FINAL_BIBLIO_ATLANTA.csv (all books with edits)
-    - extracts/*.json (one file per book with quotes and edits)
+    - data/biblio/FINAL_BIBLIO_ATLANTA.csv (all books)
+    - data/extracts/*.json (one file per book with quotes)
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
@@ -64,7 +68,7 @@ async def export_database(request: Request):
                     'year', 'data_source', 'abstract', 'keywords'
                 ])
 
-                # Fetch all books (with edits already applied in database)
+                # Fetch all books (edits are written directly to this table)
                 cursor.execute("""
                     SELECT id, title, authors, year, doi, container, entry_type, volume, issue,
                            pages, publisher, issn, source_path, meta_title, meta_author,
@@ -129,7 +133,7 @@ async def export_database(request: Request):
                     if not book_info:
                         continue
 
-                    # Get all quotes for this book (with edits already applied in database)
+                    # Get all quotes for this book (edits are written directly to this table)
                     cursor.execute("""
                         SELECT id, quote_text, page, section, keywords
                         FROM quotes
