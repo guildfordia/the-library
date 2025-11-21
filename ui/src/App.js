@@ -755,7 +755,10 @@ const ResultsList = ({
   expertMode,
   hasSearched
 }) => {
-  if (results.length === 0 && hasSearched) {
+  // Safety check: ensure results is always an array
+  const safeResults = Array.isArray(results) ? results : [];
+
+  if (safeResults.length === 0 && hasSearched) {
     return (
       <div className="text-center py-12" role="status" aria-live="polite">
         <p className="text-lg text-gray-600">No matches found</p>
@@ -766,7 +769,7 @@ const ResultsList = ({
     );
   }
 
-  if (results.length === 0) {
+  if (safeResults.length === 0) {
     return null;
   }
 
@@ -785,7 +788,7 @@ const ResultsList = ({
 
       {/* Book cards */}
       <div className="space-y-6" role="list" aria-label="Search results">
-        {results.map((result, index) => (
+        {safeResults.map((result, index) => (
           <BookCard
             key={result.book.id}
             book={{...result.book, position: (currentPage - 1) * 10 + index + 1, searchResult: result}}
