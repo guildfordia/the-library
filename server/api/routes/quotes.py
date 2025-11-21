@@ -98,7 +98,7 @@ async def reindex(request: Request):
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
-    await limiter.hit("5/hour", request=request)
+    # await limiter.hit("5/hour", request=request)
 
     try:
         import subprocess

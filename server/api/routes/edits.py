@@ -76,7 +76,7 @@ async def edit_book(book_id: int, updates: BookEditRequest, request: Request):
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
-    await limiter.hit("50/minute", request=request)
+    # await limiter.hit("50/minute", request=request)
 
     try:
         # Get client IP for tracking
@@ -135,7 +135,7 @@ async def edit_quote(quote_id: int, updates: QuoteEditRequest, request: Request)
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
-    await limiter.hit("50/minute", request=request)
+    # await limiter.hit("50/minute", request=request)
 
     try:
         # Get client IP for tracking

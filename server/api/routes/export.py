@@ -32,7 +32,7 @@ async def export_database(request: Request):
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
-    await limiter.hit("10/hour", request=request)
+    # await limiter.hit("10/hour", request=request)
 
     db_path = "index/library.db"
     if not os.path.exists(db_path):

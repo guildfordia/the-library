@@ -72,7 +72,7 @@ async def search_quotes(
     """
     # Apply rate limiting
     limiter = request.app.state.limiter
-    await limiter.hit("100/minute", request=request)
+    # await limiter.hit("100/minute", request=request)
 
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' is required")
