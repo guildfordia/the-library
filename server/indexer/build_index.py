@@ -351,8 +351,27 @@ def main():
             load_quotes(conn, extracts_dir, book_mapping)
             rebuild_fts_index(conn)
 
-        # Final stats
+        # Add performance indexes
+        print("\nAdding performance indexes...")
         cursor = conn.cursor()
+
+        # Critical index: quotes.book_id for JOIN performance
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_quotes_book_id ON quotes(book_id)")
+
+        # Additional indexes for filtering/sorting
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_year ON books(year)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_entry_type ON books(entry_type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_quotes_page ON quotes(page)")
+
+        conn.commit()
+        print("  ✓ Performance indexes created")
+
+        # Analyze tables to update statistics for query planner
+        cursor.execute("ANALYZE")
+        conn.commit()
+        print("  ✓ Table statistics updated")
+
+        # Final stats
         cursor.execute("SELECT COUNT(*) FROM books")
         book_count = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM quotes")

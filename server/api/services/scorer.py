@@ -4,6 +4,8 @@ import re
 import sqlite3
 from typing import Dict, Any, List, Optional
 
+from api.db import get_optimized_connection
+
 
 class QuoteScorer:
     """Score quotes using BM25 + phrase bonus algorithm with configurable weights."""
@@ -24,8 +26,9 @@ class QuoteScorer:
     def search_and_score(self, db_path: str, fts_query: str, exact_phrase: Optional[str] = None,
                         offset: int = 0, limit: int = 20) -> Dict[str, Any]:
         """Search quotes using FTS5 and return book-grouped results."""
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
+        conn = get_optimized_connection(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
 
             quotes = self._search_quotes(conn, fts_query, exact_phrase)
             book_results = self._group_by_book(conn, quotes, fts_query)
@@ -45,13 +48,15 @@ class QuoteScorer:
                 "offset": offset,
                 "limit": limit
             }
+        finally:
+            conn.close()
 
     def search_with_breakdown(self, db_path: str, fts_query: str, exact_phrase: Optional[str] = None,
                              limit: int = 20) -> Dict[str, Any]:
         """Search with detailed score breakdown for tuning purposes."""
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
             quotes = self._search_quotes_with_breakdown(conn, fts_query, exact_phrase)
             book_results = self._group_by_book_with_breakdown(conn, quotes, fts_query)
 
@@ -65,12 +70,14 @@ class QuoteScorer:
                 "results": sorted_books[:limit],
                 "total": len(sorted_books)
             }
+        finally:
+            conn.close()
 
     def get_quote_by_id(self, db_path: str, quote_id: int) -> Optional[Dict[str, Any]]:
         """Get a single quote by ID with full book metadata."""
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
             sql = """
             SELECT
                 q.id, q.quote_text, q.page, q.section, q.keywords, q.source_file,
@@ -88,55 +95,30 @@ class QuoteScorer:
             if not row:
                 return None
 
-            # Import editor locally to avoid circular dependency
-            from api.services.editor import editor
-
-            # Apply edits overlay to quote
-            quote_data = {
+            # Data is read directly from database (edits are already applied)
+            return {
                 "id": row['id'],
                 "quote_text": row['quote_text'],
                 "page": row['page'],
                 "section": row['section'],
-                "keywords": row['keywords']
-            }
-            quote_with_edits = editor.apply_edits('quote', row['id'], quote_data)
-
-            # Apply edits overlay to book
-            book_data = {
-                "id": row['book_id'],
-                "title": row['title'],
-                "authors": row['authors'],
-                "year": row['year'],
-                "publisher": row['publisher'],
-                "journal": row['journal'],
-                "doi": row['doi'],
-                "isbn": row['isbn'],
-                "summary": row['summary'],
-                "keywords": row['keywords']
-            }
-            book_with_edits = editor.apply_edits('book', row['book_id'], book_data)
-
-            return {
-                "id": quote_with_edits['id'],
-                "quote_text": quote_with_edits['quote_text'],
-                "page": quote_with_edits.get('page'),
-                "section": quote_with_edits.get('section'),
-                "keywords": quote_with_edits.get('keywords'),
+                "keywords": row['keywords'],
                 "book": {
-                    "id": book_with_edits['id'],
-                    "title": book_with_edits.get('title'),
-                    "authors": book_with_edits.get('authors'),
-                    "year": book_with_edits.get('year'),
-                    "publisher": book_with_edits.get('publisher'),
-                    "journal": book_with_edits.get('journal'),
-                    "doi": book_with_edits.get('doi'),
-                    "isbn": book_with_edits.get('isbn'),
+                    "id": row['book_id'],
+                    "title": row['title'],
+                    "authors": row['authors'],
+                    "year": row['year'],
+                    "publisher": row['publisher'],
+                    "journal": row['journal'],
+                    "doi": row['doi'],
+                    "isbn": row['isbn'],
                     "themes": None,  # Not in database
-                    "summary": book_with_edits.get('summary'),
-                    "keywords": book_with_edits.get('keywords')
+                    "summary": row['summary'],
+                    "keywords": row.get('keywords')  # Book keywords from doc_keywords
                 },
                 "citation": self._generate_basic_citation(row)
             }
+        finally:
+            conn.close()
 
     def _search_quotes(self, conn: sqlite3.Connection, fts_query: str,
                       exact_phrase: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -316,19 +298,14 @@ class QuoteScorer:
         book_rows = cursor.fetchall()
         books_lookup = {row['id']: dict(row) for row in book_rows}
 
-        # Import editor locally to avoid circular dependency
-        from api.services.editor import editor
-
-        # Group quotes by book
+        # Group quotes by book (data read directly from database)
         for quote in quotes:
             book_id = quote['book_id']
 
             if book_id not in book_results:
                 book_metadata = books_lookup.get(book_id, {})
-                # Apply edits overlay to book metadata
-                book_with_edits = editor.apply_edits('book', book_id, book_metadata)
                 book_results[book_id] = {
-                    "book": book_with_edits,
+                    "book": book_metadata,
                     "hits_count": 0,
                     "top_quotes": [],
                     "total_book_quotes": book_metadata.get('total_quotes', 0)
@@ -338,13 +315,11 @@ class QuoteScorer:
 
             # Keep only top 5 quotes per book
             if len(book_results[book_id]["top_quotes"]) < 5:
-                # Apply edits overlay to quote
-                quote_with_edits = editor.apply_edits('quote', quote['id'], quote)
                 quote_response = {
-                    "id": quote_with_edits['id'],
-                    "quote_text": quote_with_edits['quote_text'],
-                    "page": quote_with_edits.get('page'),
-                    "keywords": quote_with_edits.get('keywords'),
+                    "id": quote['id'],
+                    "quote_text": quote['quote_text'],
+                    "page": quote.get('page'),
+                    "keywords": quote.get('keywords'),
                     "score": round(quote['score'], 2)
                 }
                 book_results[book_id]["top_quotes"].append(quote_response)
@@ -378,19 +353,14 @@ class QuoteScorer:
         book_rows = cursor.fetchall()
         books_lookup = {row['id']: dict(row) for row in book_rows}
 
-        # Import editor locally to avoid circular dependency
-        from api.services.editor import editor
-
-        # Group quotes by book
+        # Group quotes by book (data read directly from database)
         for quote in quotes:
             book_id = quote['book_id']
 
             if book_id not in book_results:
                 book_metadata = books_lookup.get(book_id, {})
-                # Apply edits overlay to book metadata
-                book_with_edits = editor.apply_edits('book', book_id, book_metadata)
                 book_results[book_id] = {
-                    "book": book_with_edits,
+                    "book": book_metadata,
                     "hits_count": 0,
                     "top_quotes": [],
                     "total_book_quotes": book_metadata.get('total_quotes', 0)
@@ -400,17 +370,14 @@ class QuoteScorer:
 
             # Keep only top 5 quotes per book
             if len(book_results[book_id]["top_quotes"]) < 5:
-                # Apply edits overlay to quote
-                quote_with_edits = editor.apply_edits('quote', quote['id'], quote)
-
                 breakdown = quote['score_breakdown']
                 breakdown.final_score = quote['score']
 
                 quote_response = {
-                    "id": quote_with_edits['id'],
-                    "quote_text": quote_with_edits['quote_text'],
-                    "page": quote_with_edits.get('page'),
-                    "keywords": quote_with_edits.get('quote_keywords') or quote_with_edits.get('keywords'),
+                    "id": quote['id'],
+                    "quote_text": quote['quote_text'],
+                    "page": quote.get('page'),
+                    "keywords": quote.get('quote_keywords') or quote.get('keywords'),
                     "score": round(breakdown.final_score, 2),
                     "score_breakdown": breakdown
                 }
