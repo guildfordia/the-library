@@ -9,6 +9,8 @@ from typing import List, Optional, Dict, Any
 import sqlite3
 import os
 
+from api.db import get_optimized_connection
+
 router = APIRouter()
 
 DB_PATH = "index/library.db"
@@ -41,9 +43,9 @@ async def list_conflicts(resolved: bool = False):
     - **resolved=true**: Only resolved conflicts
     """
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
             if resolved:
                 sql = "SELECT * FROM conflicts WHERE resolved_at IS NOT NULL ORDER BY detected_at DESC"
             else:
@@ -53,7 +55,9 @@ async def list_conflicts(resolved: bool = False):
             cursor.execute(sql)
             rows = cursor.fetchall()
 
-        return [Conflict(**dict(row)) for row in rows]
+            return [Conflict(**dict(row)) for row in rows]
+        finally:
+            conn.close()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -63,17 +67,19 @@ async def list_conflicts(resolved: bool = False):
 async def get_conflict(conflict_id: int):
     """Get details of a specific conflict"""
     try:
-        with sqlite3.connect(DB_PATH) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        try:
             cursor = conn.cursor()
             cursor.execute("SELECT * FROM conflicts WHERE id = ?", (conflict_id,))
             row = cursor.fetchone()
 
-        if not row:
-            raise HTTPException(status_code=404, detail="Conflict not found")
+            if not row:
+                raise HTTPException(status_code=404, detail="Conflict not found")
 
-        return dict(row)
+            return dict(row)
+        finally:
+            conn.close()
 
     except HTTPException:
         raise
@@ -97,7 +103,8 @@ async def resolve_conflict(conflict_id: int, request: ResolveConflictRequest):
         )
 
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        conn = get_optimized_connection(DB_PATH)
+        try:
             cursor = conn.cursor()
 
             # Get conflict details
@@ -118,12 +125,14 @@ async def resolve_conflict(conflict_id: int, request: ResolveConflictRequest):
 
             conn.commit()
 
-        return {
-            "success": True,
-            "conflict_id": conflict_id,
-            "resolution": request.resolution,
-            "message": f"Conflict resolved as '{request.resolution}'"
-        }
+            return {
+                "success": True,
+                "conflict_id": conflict_id,
+                "resolution": request.resolution,
+                "message": f"Conflict resolved as '{request.resolution}'"
+            }
+        finally:
+            conn.close()
 
     except HTTPException:
         raise
@@ -135,7 +144,8 @@ async def resolve_conflict(conflict_id: int, request: ResolveConflictRequest):
 async def conflict_stats():
     """Get statistics about conflicts"""
     try:
-        with sqlite3.connect(DB_PATH) as conn:
+        conn = get_optimized_connection(DB_PATH)
+        try:
             cursor = conn.cursor()
 
             cursor.execute("SELECT COUNT(*) FROM conflicts WHERE resolved_at IS NULL")
@@ -152,12 +162,14 @@ async def conflict_stats():
             """)
             by_type = {row[0]: row[1] for row in cursor.fetchall()}
 
-        return {
-            "unresolved": unresolved,
-            "resolved": resolved,
-            "total": unresolved + resolved,
-            "by_type": by_type
-        }
+            return {
+                "unresolved": unresolved,
+                "resolved": resolved,
+                "total": unresolved + resolved,
+                "by_type": by_type
+            }
+        finally:
+            conn.close()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

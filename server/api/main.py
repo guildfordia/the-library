@@ -1,7 +1,6 @@
 """FastAPI application entry point for The Library quote search system."""
 
 import os
-import sqlite3
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +9,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from api.routes import search, quotes, books, tuning, expert, edits, conflicts, export
+from api.db import get_optimized_connection
 
 app = FastAPI(
     title="The Library API",
@@ -59,11 +59,11 @@ async def health_check():
             detail="Database not found. Run indexer first."
         )
 
+    conn = get_optimized_connection(db_path)
     try:
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
-            table_count = cursor.fetchone()[0]
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+        table_count = cursor.fetchone()[0]
 
         return {
             "status": "healthy",
@@ -75,6 +75,8 @@ async def health_check():
             status_code=503,
             detail=f"Database error: {str(e)}"
         )
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":

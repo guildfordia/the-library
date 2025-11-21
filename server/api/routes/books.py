@@ -10,6 +10,7 @@ import os
 
 from api.services.scorer import scorer
 from api.services.editor import editor
+from api.db import get_optimized_connection
 
 router = APIRouter()
 
@@ -49,11 +50,9 @@ async def get_book_quotes(
         raise HTTPException(status_code=503, detail="Search index not found. Please run the indexer first.")
 
     try:
-        import sqlite3
-
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(db_path)
+        conn.row_factory = __import__('sqlite3').Row
+        try:
             # Base query to get quotes for this book
             if relevant and q.strip():
                 # Get relevant quotes using FTS search
@@ -97,14 +96,16 @@ async def get_book_quotes(
                     keywords=row.get('keywords')
                 ))
 
-        return BookQuotesResponse(
-            book_id=book_id,
-            relevant=relevant,
-            offset=offset,
-            quotes=quotes,
-            has_more=has_more,
-            total_count=total_count
-        )
+            return BookQuotesResponse(
+                book_id=book_id,
+                relevant=relevant,
+                offset=offset,
+                quotes=quotes,
+                has_more=has_more,
+                total_count=total_count
+            )
+        finally:
+            conn.close()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching quotes: {str(e)}")
@@ -123,11 +124,9 @@ async def get_book_citation(
         raise HTTPException(status_code=503, detail="Search index not found.")
 
     try:
-        import sqlite3
-
-        with sqlite3.connect(db_path) as conn:
-            conn.row_factory = sqlite3.Row
-
+        conn = get_optimized_connection(db_path)
+        conn.row_factory = __import__('sqlite3').Row
+        try:
             cursor = conn.cursor()
             cursor.execute("""
             SELECT title, authors, year, publisher, container, doi, issn, source_path
@@ -140,6 +139,8 @@ async def get_book_citation(
                 raise HTTPException(status_code=404, detail="Book not found")
 
             book = dict(book_row)
+        finally:
+            conn.close()
 
         # Generate basic citation
         parts = []

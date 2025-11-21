@@ -9,6 +9,7 @@ from typing import Optional
 import os
 
 from api.services.scorer import scorer
+from api.db import get_optimized_connection
 
 router = APIRouter()
 
@@ -143,9 +144,8 @@ async def get_stats():
         raise HTTPException(status_code=503, detail="Search index not found. Please run the indexer first.")
 
     try:
-        import sqlite3
-
-        with sqlite3.connect(db_path) as conn:
+        conn = get_optimized_connection(db_path)
+        try:
             cursor = conn.cursor()
 
             # Get table counts
@@ -158,6 +158,8 @@ async def get_stats():
             # Get FTS stats
             cursor.execute("SELECT COUNT(*) FROM quotes_fts")
             fts_count = cursor.fetchone()[0]
+        finally:
+            conn.close()
 
         # Get database file size (outside connection)
         db_size = os.path.getsize(db_path)

@@ -8,6 +8,8 @@ import time
 import logging
 from typing import Dict, Any, List, Optional
 
+from api.db import get_optimized_connection
+
 logger = logging.getLogger(__name__)
 
 
@@ -115,8 +117,9 @@ class EditorService:
         table_name = self._validate_field(entity_type, field_name)
 
         def _perform_edit():
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            conn = get_optimized_connection(self.db_path)
+            conn.row_factory = sqlite3.Row
+            try:
                 cursor = conn.cursor()
 
                 # Get current value
@@ -143,6 +146,8 @@ class EditorService:
                     "new_value": new_value,
                     "status": "success"
                 }
+            finally:
+                conn.close()
 
         return self._retry_on_lock(_perform_edit)
 
@@ -170,8 +175,9 @@ class EditorService:
         def _perform_multiple_edits():
             results = []
 
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            conn = get_optimized_connection(self.db_path)
+            conn.row_factory = sqlite3.Row
+            try:
                 cursor = conn.cursor()
 
                 try:
@@ -211,6 +217,8 @@ class EditorService:
                     conn.rollback()
                     logger.error(f"Failed to save edits for {entity_type} {entity_id}: {e}")
                     raise
+            finally:
+                conn.close()
 
             return results
 
@@ -231,8 +239,9 @@ class EditorService:
             raise InvalidFieldError(f"Invalid entity_type: {entity_type}. Must be 'book' or 'quote'")
 
         def _get_entity():
-            with sqlite3.connect(self.db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            conn = get_optimized_connection(self.db_path)
+            conn.row_factory = sqlite3.Row
+            try:
                 cursor = conn.cursor()
 
                 # Get entity data
@@ -246,6 +255,8 @@ class EditorService:
                     return None
 
                 return dict(row)
+            finally:
+                conn.close()
 
         return self._retry_on_lock(_get_entity)
 

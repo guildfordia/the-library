@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from api.services.indexer import indexer
+from api.db import get_optimized_connection
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,6 @@ async def get_expert_status():
     """Get status of the expert mode system."""
     try:
         import os
-        import sqlite3
 
         db_path = "index/library.db"
 
@@ -114,7 +114,8 @@ async def get_expert_status():
                 "message": "No database found. Use /expert/reindex to create one."
             }
 
-        with sqlite3.connect(db_path) as conn:
+        conn = get_optimized_connection(db_path)
+        try:
             cursor = conn.cursor()
 
             # Get table counts
@@ -135,6 +136,8 @@ async def get_expert_status():
                 "quotes_count": quotes_count,
                 "message": f"Database ready with {books_count} books and {quotes_count} quotes"
             }
+        finally:
+            conn.close()
 
     except Exception as e:
         logger.error(f"Failed to get expert status: {str(e)}")

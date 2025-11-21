@@ -14,6 +14,8 @@ from typing import Dict, List
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from api.db import get_optimized_connection
+
 router = APIRouter()
 
 
@@ -44,9 +46,10 @@ async def export_database(request: Request):
         zip_buffer = io.BytesIO()
 
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Connect to database with context manager
-            with sqlite3.connect(db_path) as conn:
-                conn.row_factory = sqlite3.Row
+            # Connect to database with optimized connection
+            conn = get_optimized_connection(db_path)
+            conn.row_factory = sqlite3.Row
+            try:
                 cursor = conn.cursor()
 
                 # Export books to CSV
@@ -168,6 +171,8 @@ async def export_database(request: Request):
                     )
 
                     quote_files_count += 1
+            finally:
+                conn.close()
 
         # Prepare ZIP for download
         zip_buffer.seek(0)

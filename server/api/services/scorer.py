@@ -6,6 +6,11 @@ from typing import Dict, Any, List, Optional
 
 from api.db import get_optimized_connection
 
+# Search configuration constants
+MAX_SEARCH_RESULTS = 1000  # FTS query limit before ranking
+TOP_QUOTES_PER_BOOK = 5    # Number of quotes shown per book in results
+DEFAULT_SEARCH_LIMIT = 20  # Default pagination limit
+
 
 class QuoteScorer:
     """Score quotes using BM25 + phrase bonus algorithm with configurable weights."""
@@ -134,11 +139,11 @@ class QuoteScorer:
         JOIN quotes q ON q.id = fts.rowid
         WHERE quotes_fts MATCH ?
         ORDER BY bm25(quotes_fts)
-        LIMIT 1000
+        LIMIT ?
         """
 
         cursor = conn.cursor()
-        cursor.execute(sql, (fts_query,))
+        cursor.execute(sql, (fts_query, MAX_SEARCH_RESULTS))
         rows = cursor.fetchall()
 
         quotes = []
@@ -185,11 +190,11 @@ class QuoteScorer:
         JOIN books b ON q.book_id = b.id
         WHERE quotes_fts MATCH ?
         ORDER BY bm25(quotes_fts)
-        LIMIT 1000
+        LIMIT ?
         """
 
         cursor = conn.cursor()
-        cursor.execute(sql, (fts_query,))
+        cursor.execute(sql, (fts_query, MAX_SEARCH_RESULTS))
         rows = cursor.fetchall()
 
         quotes = []
@@ -271,16 +276,11 @@ class QuoteScorer:
         pattern = r'\b' + escaped_phrase + r'\b'
         return bool(re.search(pattern, text, re.IGNORECASE))
 
-    def _group_by_book(self, conn: sqlite3.Connection, quotes: List[Dict[str, Any]],
-                      original_query: str = None) -> Dict[int, Dict[str, Any]]:
-        """Group quotes by book and prepare book-level results."""
-        book_results = {}
-        book_ids = list(set(quote['book_id'] for quote in quotes))
-
+    def _fetch_book_metadata(self, conn: sqlite3.Connection, book_ids: List[int]) -> Dict[int, Dict[str, Any]]:
+        """Fetch book metadata for given book IDs."""
         if not book_ids:
             return {}
 
-        # Fetch book metadata with total quotes count
         placeholders = ','.join('?' * len(book_ids))
         book_sql = f"""
         SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
@@ -296,7 +296,17 @@ class QuoteScorer:
         cursor = conn.cursor()
         cursor.execute(book_sql, book_ids)
         book_rows = cursor.fetchall()
-        books_lookup = {row['id']: dict(row) for row in book_rows}
+        return {row['id']: dict(row) for row in book_rows}
+
+    def _group_by_book(self, conn: sqlite3.Connection, quotes: List[Dict[str, Any]],
+                      original_query: str = None) -> Dict[int, Dict[str, Any]]:
+        """Group quotes by book and prepare book-level results."""
+        book_ids = list(set(quote['book_id'] for quote in quotes))
+        if not book_ids:
+            return {}
+
+        books_lookup = self._fetch_book_metadata(conn, book_ids)
+        book_results = {}
 
         # Group quotes by book (data read directly from database)
         for quote in quotes:
@@ -313,8 +323,8 @@ class QuoteScorer:
 
             book_results[book_id]["hits_count"] += 1
 
-            # Keep only top 5 quotes per book
-            if len(book_results[book_id]["top_quotes"]) < 5:
+            # Keep only top N quotes per book
+            if len(book_results[book_id]["top_quotes"]) < TOP_QUOTES_PER_BOOK:
                 quote_response = {
                     "id": quote['id'],
                     "quote_text": quote['quote_text'],
@@ -329,29 +339,12 @@ class QuoteScorer:
     def _group_by_book_with_breakdown(self, conn: sqlite3.Connection, quotes: List[Dict[str, Any]],
                                      original_query: str = None) -> Dict[int, Dict[str, Any]]:
         """Group quotes by book with score breakdown."""
-        book_results = {}
         book_ids = list(set(quote['book_id'] for quote in quotes))
-
         if not book_ids:
             return {}
 
-        # Fetch book metadata
-        placeholders = ','.join('?' * len(book_ids))
-        book_sql = f"""
-        SELECT b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
-               b.doc_keywords, b.doc_summary, b.source_path,
-               COUNT(q.id) as total_quotes
-        FROM books b
-        LEFT JOIN quotes q ON b.id = q.book_id
-        WHERE b.id IN ({placeholders})
-        GROUP BY b.id, b.title, b.authors, b.year, b.publisher, b.container, b.entry_type, b.doi, b.issn,
-                 b.doc_keywords, b.doc_summary, b.source_path
-        """
-
-        cursor = conn.cursor()
-        cursor.execute(book_sql, book_ids)
-        book_rows = cursor.fetchall()
-        books_lookup = {row['id']: dict(row) for row in book_rows}
+        books_lookup = self._fetch_book_metadata(conn, book_ids)
+        book_results = {}
 
         # Group quotes by book (data read directly from database)
         for quote in quotes:
@@ -368,8 +361,8 @@ class QuoteScorer:
 
             book_results[book_id]["hits_count"] += 1
 
-            # Keep only top 5 quotes per book
-            if len(book_results[book_id]["top_quotes"]) < 5:
+            # Keep only top N quotes per book
+            if len(book_results[book_id]["top_quotes"]) < TOP_QUOTES_PER_BOOK:
                 breakdown = quote['score_breakdown']
                 breakdown.final_score = quote['score']
 
